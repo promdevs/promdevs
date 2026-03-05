@@ -47,7 +47,7 @@ export function Header() {
                 priority
               />
             </span>
-            <span className="text-lg font-rubik font-semibold tracking-tight sm:text-xl">
+            <span className="text-lg font-museo-moderno font-semibold tracking-tight sm:text-xl">
               <span className="text-black dark:text-white">prom</span>
               <span className="text-accent">devs</span>
             </span>

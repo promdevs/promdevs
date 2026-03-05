@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Arimo, Rubik } from 'next/font/google'
+import { Arimo, Rubik, MuseoModerno } from 'next/font/google'
 
 const arimo = Arimo({
   subsets: ['latin'],
@@ -12,6 +12,12 @@ const rubik = Rubik({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-rubik'
+});
+
+const museoModerno = MuseoModerno({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-museo-moderno'
 });
 
 
@@ -58,7 +64,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${arimo.variable} ${rubik.variable} bg-white text-neutral-900 antialiased transition-colors duration-300 dark:bg-black dark:text-white`}>
+      <body className={`${arimo.variable} ${rubik.variable} ${museoModerno.variable} bg-white text-neutral-900 antialiased transition-colors duration-300 dark:bg-black dark:text-white`}>
         {children}
       </body>
     </html>
