@@ -9,6 +9,7 @@
   --shadow-soft-dark: 0 10px 30px rgba(0, 0, 0, 0.32);
 }
 
+
 @theme inline {
   --font-arimo: var(--font-arimo);
   --font-rubik: var(--font-rubik);
