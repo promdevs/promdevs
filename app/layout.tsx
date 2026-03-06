@@ -23,7 +23,7 @@ const museoModerno = MuseoModerno({
 
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://promdevs.com"),
+  metadataBase: new URL("https://www.promdevs.com"),
   title: "PromDevs \u2014 Coming Soon",
   description:
     "PromDevs is launching soon. We build modern web products and are creating a hiring platform for proven developers.",
@@ -31,15 +31,15 @@ export const metadata: Metadata = {
     title: "PromDevs \u2014 Coming Soon",
     description:
       "PromDevs is launching soon. We build modern web products and are creating a hiring platform for proven developers.",
-    images: ["/opengraph-image"],
-    type: "website"
+    type: "website",
+    siteName: "PromDevs",
+    url: "https://www.promdevs.com",
   },
   twitter: {
     card: "summary_large_image",
     title: "PromDevs \u2014 Coming Soon",
     description:
       "PromDevs is launching soon. We build modern web products and are creating a hiring platform for proven developers.",
-    images: ["/opengraph-image"]
   }
 };
 
