@@ -1,6 +1,6 @@
-# PromDevs v1 (Coming Soon)
+# PromDevs v2
 
-Single-page "Coming Soon" landing page built with Next.js App Router, TypeScript, and Tailwind CSS.
+Landing page built with Next.js App Router, TypeScript, and Tailwind CSS.
 
 ## Features
 
@@ -32,7 +32,7 @@ Single-page "Coming Soon" landing page built with Next.js App Router, TypeScript
 npm install
 ```
 
-2. Configure environment variables:
+1. Configure environment variables:
 
 ```bash
 cp .env.example .env.local
@@ -47,13 +47,13 @@ Optional:
 
 - `CONTACT_FROM_EMAIL` (defaults to `onboarding@resend.dev`)
 
-3. Start development server:
+1. Start development server:
 
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000).
+1. Open [http://localhost:3000](http://localhost:3000).
 
 ## Contact API
 
@@ -78,5 +78,3 @@ Responses:
 - `500` provider or server error.
 
 If Resend is not configured, submissions are accepted and logged server-side with a clear TODO log line.
-# promdevs
-# promdevs

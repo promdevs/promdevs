@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Arimo, Rubik, MuseoModerno } from 'next/font/google'
+import { GoogleTagManager } from '@next/third-parties/google'
+
 
 const arimo = Arimo({
   subsets: ['latin'],
@@ -24,22 +26,22 @@ const museoModerno = MuseoModerno({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.promdevs.com"),
-  title: "PromDevs \u2014 Coming Soon",
+  title: "PromDevs \u2014 Build & Hire Developers",
   description:
-    "PromDevs is launching soon. We build modern web products and are creating a hiring platform for proven developers.",
+    "PromDevs helps startups and businesses build products, hire developers, and showcase technical talent.",
   openGraph: {
-    title: "PromDevs \u2014 Coming Soon",
+    title: "PromDevs \u2014 Build & Hire Developers",
     description:
-      "PromDevs is launching soon. We build modern web products and are creating a hiring platform for proven developers.",
+      "PromDevs helps startups and businesses build products, hire developers, and showcase technical talent.",
     type: "website",
     siteName: "PromDevs",
     url: "https://www.promdevs.com",
   },
   twitter: {
     card: "summary_large_image",
-    title: "PromDevs \u2014 Coming Soon",
+    title: "PromDevs \u2014 Build & Hire Developers",
     description:
-      "PromDevs is launching soon. We build modern web products and are creating a hiring platform for proven developers.",
+      "PromDevs helps startups and businesses build products, hire developers, and showcase technical talent.",
   }
 };
 
@@ -61,6 +63,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <GoogleTagManager gtmId="G-L0FJ2JDD88" />
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

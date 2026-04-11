@@ -1,0 +1,20 @@
+CREATE TABLE "projects" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"title" text NOT NULL,
+	"slug" text NOT NULL,
+	"description" text NOT NULL,
+	"category" text NOT NULL,
+	"tech_stack" text[] NOT NULL,
+	"cover_image" text,
+	"live_url" text,
+	"github_url" text,
+	"featured" boolean DEFAULT false NOT NULL,
+	"status" text DEFAULT 'completed' NOT NULL,
+	"year" integer NOT NULL,
+	"problem" text,
+	"solution" text,
+	"results" text,
+	"tags" text[],
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "projects_slug_unique" UNIQUE("slug")
+);
