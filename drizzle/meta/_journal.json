@@ -8,6 +8,20 @@
       "when": 1772757849348,
       "tag": "0000_adorable_northstar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1741392000000,
+      "tag": "0001_projects_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772988896853,
+      "tag": "0002_amused_beyonder",
+      "breakpoints": true
     }
   ]
 }
