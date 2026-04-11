@@ -29,12 +29,12 @@ export function Hero() {
               >
                 Contact us
               </a>
-              <a
+              {/* <a
                 href="#work"
                 className="inline-flex items-center justify-center rounded-2xl border border-neutral-300 bg-white px-6 py-3 text-sm font-medium text-neutral-900 transition hover:-translate-y-0.5 hover:border-accent hover:text-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:border-white/20 dark:bg-black dark:text-white dark:focus-visible:ring-offset-black"
               >
                 See our work
-              </a>
+              </a> */}
             </div>
           </MotionReveal>
         </div>

@@ -2,7 +2,7 @@ import { Header } from "@/components/Header";
 import { About } from "@/components/sections/About";
 import { Contact } from "@/components/sections/Contact";
 import { Hero } from "@/components/sections/Hero";
-import { Projects } from "@/components/sections/Projects";
+// import { Projects } from "@/components/sections/Projects";
 import { Services } from "@/components/sections/Services";
 import { Github, Linkedin, X, Youtube } from "@/components/icons";
 
@@ -17,7 +17,7 @@ export default function HomePage() {
       <main id="home" className="relative z-10">
         <Hero />
         <Services />
-        <Projects />
+        {/* <Projects /> */}
         <About />
         <Contact />
       </main>
