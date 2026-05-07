@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Arimo, Rubik, MuseoModerno } from 'next/font/google'
-import { GoogleTagManager } from '@next/third-parties/google'
+import { GoogleAnalytics, GoogleTagManager } from '@next/third-parties/google'
 
 
 const arimo = Arimo({
@@ -64,6 +64,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <GoogleTagManager gtmId="G-L0FJ2JDD88" />
+      <GoogleAnalytics gaId="G-1Z9KZ5VZ8C" />
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
