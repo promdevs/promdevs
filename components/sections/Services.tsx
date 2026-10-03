@@ -1,25 +1,40 @@
 import { ArrowUpRight } from "lucide-react";
+import { ActionLink } from "@/components/Action";
 import { MotionReveal } from "@/components/MotionReveal";
+
 const services = [
   {
-    name: "Web applications",
+    name: "Product design & engineering",
+    positioning: "Make the right thing. Build it properly.",
     description:
-      "From your first product to your next chapter. We build thoughtful, reliable web applications around what your business actually needs.",
-    tags: ["Web platforms", "Custom development", "Product engineering"],
+      "We shape ideas into clear product direction, intuitive UX/UI, and sound technical foundations. From early concepts to complex requirements, design and engineering work together from the start.",
   },
   {
-    name: "API integration",
+    name: "Web, mobile & AI products",
+    positioning: "Built around what people need.",
     description:
-      "Make your systems work together. We connect the tools, payments, and data behind a seamless product experience.",
-    tags: ["Connected systems", "Automation", "Backend development"],
+      "We develop custom web applications, iOS and Android apps, and AI-powered products, connecting interfaces, APIs, and intelligent workflows into a coherent experience.",
   },
   {
-    name: "UI/UX & performance",
+    name: "Prototype to production",
+    positioning: "Promising is only the beginning.",
     description:
-      "The details make the difference. Clear interfaces, purposeful interactions, and fast experiences that feel effortless to use.",
-    tags: ["Interface design", "User experience", "Performance"],
+      "We turn MVPs, prototypes, and AI-generated builds into production-ready products—strengthening architecture, completing features, and building reliable backends and databases.",
+  },
+  {
+    name: "Product rescue & migrations",
+    positioning: "Move forward without starting over.",
+    description:
+      "We take over unfinished or struggling products, solve difficult technical problems, and improve existing experiences. That includes website and app migrations, backend changes, and carefully planned database migrations.",
+  },
+  {
+    name: "Quality & launch",
+    positioning: "Ready for the real world.",
+    description:
+      "QA, testing, accessibility, and performance improvements help polish the experience before release. We handle production deployment and support App Store and Google Play submissions, including preparation and review follow-up.",
   },
 ];
+
 export function Services() {
   return (
     <section
@@ -27,34 +42,33 @@ export function Services() {
       className="shell services"
       aria-labelledby="services-title"
     >
-      <MotionReveal className="section-intro">
-        <p className="eyebrow">01 / What we do</p>
-        <div>
-          <h2 id="services-title" className="section-heading">
-            Your ambition.
-            <br />
-            Our craft.
+      <div className="services-intro">
+        <MotionReveal>
+          <p className="eyebrow">Our capabilities</p>
+          <h2 id="services-title" className="services-title">
+            What we do.
           </h2>
-          <p className="muted">
-            Product design and engineering for web apps, mobile apps, and AI
-            products. We build from scratch and improve the products you already
-            have.
+          <p className="services-statement">
+            <span>Your product.</span>
+            <em>At any stage.</em>
           </p>
-        </div>
-      </MotionReveal>
-      <div>
+          <p className="services-copy">
+            Bring us a rough idea, a prototype, an unfinished or AI-generated
+            build, or a product already in use. We turn starting points into
+            polished, production-ready web, mobile, and AI products—and help
+            carry them through launch.
+          </p>
+          <ActionLink href="#contact" label="Let’s build something" />
+        </MotionReveal>
+      </div>
+      <div className="services-list">
         {services.map((service, index) => (
           <MotionReveal key={service.name} delayMs={index * 70}>
             <article className="service-row">
-              <span className="service-number">0{index + 1}</span>
-              <h3>{service.name}</h3>
-              <div className="service-description">
-                <p>{service.description}</p>
-                <div className="service-tags">
-                  {service.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </div>
+              <div className="service-content">
+                <h3>{service.name}</h3>
+                <p className="service-positioning">{service.positioning}</p>
+                <p className="service-description">{service.description}</p>
               </div>
               <a
                 href="#contact"

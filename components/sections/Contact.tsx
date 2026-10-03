@@ -72,7 +72,7 @@ export function Contact() {
       aria-labelledby="contact-title"
     >
       <MotionReveal>
-        <p className="eyebrow">03 / Start a conversation</p>
+        <p className="eyebrow">Start a conversation</p>
         <h2 id="contact-title" className="section-heading">
           Something
           <br />

@@ -6,7 +6,7 @@ export function About() {
       <MotionReveal className="about-panel">
         <div className="about-layout">
           <div>
-            <p className="eyebrow">02 / The way we work</p>
+            <p className="eyebrow">The way we work</p>
             <h2 id="about-title" className="section-heading mt-8">
               Small details.
               <br />
