@@ -1,33 +1,56 @@
+import { Compass, Layers, MessagesSquare } from "lucide-react";
 import { MotionReveal } from "@/components/MotionReveal";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
 export function About() {
   return (
-    <section id="about" className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
-      <MotionReveal>
-        <Card className="p-2 sm:p-4">
-          <CardHeader className="pb-2">
-            <h2 className="text-3xl font-semibold tracking-tight">About</h2>
-          </CardHeader>
-          <CardContent>
-          <p className="mt-5 max-w-3xl leading-relaxed text-neutral-700 dark:text-neutral-300">
-            PromDevs exists to help product teams launch better software with
-            less risk. We partner closely with founders and leaders to deliver
-            reliable web products and build trusted engineering momentum.
-          </p>
-          <ul className="mt-6 grid gap-3 text-sm sm:grid-cols-3">
-            <li className="rounded-2xl border border-neutral-200 px-4 py-3 transition hover:border-accent/40 dark:border-white/10 dark:hover:border-accent/60">
-              Quality first in architecture and execution
-            </li>
-            <li className="rounded-2xl border border-neutral-200 px-4 py-3 transition hover:border-accent/40 dark:border-white/10 dark:hover:border-accent/60">
-              Speed without cutting critical corners
-            </li>
-            <li className="rounded-2xl border border-neutral-200 px-4 py-3 transition hover:border-accent/40 dark:border-white/10 dark:hover:border-accent/60">
-              Clear communication from kickoff to delivery
-            </li>
-          </ul>
-          </CardContent>
-        </Card>
+    <section id="about" className="shell" aria-labelledby="about-title">
+      <MotionReveal className="about-panel">
+        <div className="about-layout">
+          <div>
+            <p className="eyebrow">02 / The way we work</p>
+            <h2 id="about-title" className="section-heading mt-8">
+              Small details.
+              <br />
+              Big difference.
+            </h2>
+          </div>
+          <div>
+            <p className="about-copy">
+              Good work starts with people who care about what they&apos;re
+              building.
+            </p>
+            <p className="muted leading-relaxed">
+              We&apos;re PromDevs. We partner with founders and product teams to
+              turn complex challenges into clear, useful digital experiences.
+              Close collaboration, thoughtful decisions, and care from start to
+              finish.
+            </p>
+          </div>
+        </div>
+        <div className="principles">
+          <div>
+            <Layers aria-hidden />
+            <h3>Built with intention</h3>
+            <p>
+              Quality in the architecture, the interface, and everything in
+              between.
+            </p>
+          </div>
+          <div>
+            <Compass aria-hidden />
+            <h3>Progress with purpose</h3>
+            <p>
+              A practical path from idea to launch, without losing sight of the
+              details.
+            </p>
+          </div>
+          <div>
+            <MessagesSquare aria-hidden />
+            <h3>Always in the loop</h3>
+            <p>
+              Honest conversations, shared decisions, and clear communication.
+            </p>
+          </div>
+        </div>
       </MotionReveal>
     </section>
   );

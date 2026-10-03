@@ -1,20 +1,35 @@
-export function GET() {
-  const baseUrl = "https://promdevs.com";
-  const now = new Date().toISOString();
-  const content = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${baseUrl}/</loc>
-    <lastmod>${now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-</urlset>`;
+import { db } from "@/db/client";
+import { projects } from "@/db/schema";
+import { site } from "@/lib/site";
 
+const escapeXml = (value: string) =>
+  value.replace(
+    /[<>&'\"]/g,
+    (character) =>
+      ({
+        "<": "&lt;",
+        ">": "&gt;",
+        "&": "&amp;",
+        "'": "&apos;",
+        '"': "&quot;",
+      })[character]!,
+  );
+
+export async function GET() {
+  let slugs: string[] = [];
+  try {
+    const rows = await db.select({ slug: projects.slug }).from(projects);
+    slugs = rows.map(({ slug }) => slug);
+  } catch {
+    // Keep the core pages discoverable if the project data source is unavailable.
+  }
+  const urls = [
+    "/",
+    "/projects",
+    ...slugs.map((slug) => `/projects/${encodeURIComponent(slug)}`),
+  ];
+  const content = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((path) => `  <url><loc>${escapeXml(site.url + path)}</loc></url>`).join("\n")}\n</urlset>`;
   return new Response(content, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/xml; charset=utf-8"
-    }
+    headers: { "Content-Type": "application/xml; charset=utf-8" },
   });
 }

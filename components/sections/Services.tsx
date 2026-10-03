@@ -1,31 +1,69 @@
+import { ArrowUpRight } from "lucide-react";
 import { MotionReveal } from "@/components/MotionReveal";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const services = ["Web Apps", "API Integration", "UI/UX & Performance"];
-
+const services = [
+  {
+    name: "Web applications",
+    description:
+      "From your first product to your next chapter. We build thoughtful, reliable web applications around what your business actually needs.",
+    tags: ["Web platforms", "Custom development", "Product engineering"],
+  },
+  {
+    name: "API integration",
+    description:
+      "Make your systems work together. We connect the tools, payments, and data behind a seamless product experience.",
+    tags: ["Connected systems", "Automation", "Backend development"],
+  },
+  {
+    name: "UI/UX & performance",
+    description:
+      "The details make the difference. Clear interfaces, purposeful interactions, and fast experiences that feel effortless to use.",
+    tags: ["Interface design", "User experience", "Performance"],
+  },
+];
 export function Services() {
   return (
-    <section id="services" className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
-      <MotionReveal className="mb-8 flex items-end justify-between">
-        <h2 className="text-3xl font-semibold tracking-tight">Services</h2>
+    <section
+      id="services"
+      className="shell services"
+      aria-labelledby="services-title"
+    >
+      <MotionReveal className="section-intro">
+        <p className="eyebrow">01 / What we do</p>
+        <div>
+          <h2 id="services-title" className="section-heading">
+            Your ambition.
+            <br />
+            Our craft.
+          </h2>
+          <p className="muted">
+            Product design and engineering for web apps, mobile apps, and AI
+            products. We build from scratch and improve the products you already
+            have.
+          </p>
+        </div>
       </MotionReveal>
-      <div className="grid gap-5 md:grid-cols-3">
+      <div>
         {services.map((service, index) => (
-          <MotionReveal
-            key={service}
-            delayMs={index * 110}
-          >
-            <Card className="transition hover:-translate-y-1 hover:shadow-xl dark:hover:shadow-2xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">{service}</CardTitle>
-              </CardHeader>
-              <CardContent>
-              <p className="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-                Practical delivery from architecture to launch with a focus on
-                maintainability and measurable outcomes.
-              </p>
-              </CardContent>
-            </Card>
+          <MotionReveal key={service.name} delayMs={index * 70}>
+            <article className="service-row">
+              <span className="service-number">0{index + 1}</span>
+              <h3>{service.name}</h3>
+              <div className="service-description">
+                <p>{service.description}</p>
+                <div className="service-tags">
+                  {service.tags.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+              <a
+                href="#contact"
+                className="service-arrow"
+                aria-label={"Discuss " + service.name}
+              >
+                <ArrowUpRight size={20} aria-hidden />
+              </a>
+            </article>
           </MotionReveal>
         ))}
       </div>
