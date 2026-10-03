@@ -1,3 +1,4 @@
+import "server-only";
 import { Resend } from "resend";
 
 export type ContactEmailInput = {
@@ -20,11 +21,11 @@ export async function sendContactEmail(payload: ContactEmailInput) {
   if (!apiKey || !toEmail) {
     console.info(
       "[TODO] Configure RESEND_API_KEY and CONTACT_TO_EMAIL. Contact payload:",
-      payload
+      payload,
     );
     return {
       ok: true,
-      fallback: true
+      fallback: true,
     } as const;
   }
 
@@ -35,7 +36,7 @@ export async function sendContactEmail(payload: ContactEmailInput) {
     to: to,
     replyTo: payload.email,
     subject: `[PromDevs Contact] ${payload.subject}`,
-    text: `Name: ${payload.name}\nEmail: ${payload.email}\n\nMessage:\n${payload.message}`
+    text: `Name: ${payload.name}\nEmail: ${payload.email}\n\nMessage:\n${payload.message}`,
   });
 
   if (result.error) {
@@ -44,6 +45,6 @@ export async function sendContactEmail(payload: ContactEmailInput) {
 
   return {
     ok: true,
-    fallback: false
+    fallback: false,
   } as const;
 }

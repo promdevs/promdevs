@@ -46,6 +46,12 @@ Required for live email sending:
 Optional:
 
 - `CONTACT_FROM_EMAIL` (defaults to `onboarding@resend.dev`)
+- `CONTACT_TO_NAME` and `CONTACT_FROM_NAME` for email display names.
+
+Set `DATABASE_URL` in `.env` for the existing Neon/Drizzle project routes and
+database CLI commands. Next.js also loads `.env.local`, but the Drizzle CLI's
+`dotenv/config` reads `.env` by default. All of these values are server-only;
+never prefix credentials with `NEXT_PUBLIC_`.
 
 1. Start development server:
 
@@ -90,7 +96,7 @@ preferences and page content remains visible without JavaScript.
 
 ### Runtime and versions
 
-Use Node.js 24 LTS (see .nvmrc). Next.js 16.3.5, React 19.3.0, Tailwind CSS 4.3.3,
+Use Node.js 24 LTS (see .nvmrc). Next.js 16.3.8, React 19.3.0, Tailwind CSS 4.3.3,
 Lucide, Resend, Zod, and the other stable dependencies were updated against npm's stable tags.
 TypeScript stays on the newest 6.x release because typescript-eslint does not yet support 7.0.
 ESLint stays on the newest 9.x release because the plugins bundled with Next's config do not
@@ -112,11 +118,56 @@ Future backend integration can replace this data source independently of the pag
 
 ### Dependency audit
 
-At the time of the refresh, npm audit --omit=dev reports zero vulnerabilities. Four moderate
-advisories remain in the development-only drizzle-kit / esbuild dependency chain. npm's forced
-fix proposes a breaking downgrade of drizzle-kit; that downgrade was deliberately not applied.
+The October 2026 security check updated Next.js to 16.3.8, including the 16.3.6 security fix. The
+production dependency audit reports zero vulnerabilities. The full audit still
+reports 14 development-tooling advisories (8 high, 6 moderate), including
+glob-matching dependencies, Drizzle/esbuild, and CLI utilities. Several suggested
+fixes downgrade Next's ESLint config, shadcn, or drizzle-kit across major versions;
+those breaking changes were deliberately not applied. Review these before using
+development tools with untrusted input, and keep local development servers private.
 
 ### Analytics
 
 The existing GA4 measurement ID is retained. The old GoogleTagManager component was removed
 because its supplied ID was a G- measurement ID, not a GTM- container ID.
+
+### Secret protection
+
+Environment files and private-key formats are Git-ignored; `.env.example` contains
+only empty credentials and safe defaults. Database and email modules use
+`server-only` to prevent accidental imports into browser components.
+The Google Analytics measurement ID is intentionally public, not an API secret.
+
+The Secret scan GitHub workflow checks complete Git history on pushes and pull
+requests. It uses a pinned, checksum-verified Gitleaks binary with default rules
+plus a database-connection rule, and redacts detected values. No paid scanner
+integration is needed. Check scans locally with Gitleaks 8.30.1:
+
+```bash
+gitleaks git --log-opts="--all" --redact=100 --no-banner .
+```
+
+If a real credential is ever committed, revoke or rotate it first. Deleting the
+file or adding an ignore rule does not remove it from Git history, existing
+clones, or forks. Coordinate any subsequent history rewrite rather than
+force-pushing without agreement. Do not commit scan reports containing secrets.
+
+### Social preview image
+
+Open Graph and Twitter share the same 1200 x 630 PNG design, using the existing
+PromDevs logo, local fonts, monochrome stipple, and homepage headline. Both images
+have descriptive alt text and are discovered through Next.js file-based metadata.
+No image-generation request or external font service runs in production.
+
+To prepare the editable HTML composition:
+
+```bash
+node scripts/assets/prepare-social-card.mjs
+```
+
+Render the resulting `output/social/preview.html` in Chromium at 1200 x 630 and
+device scale factor 1 after fonts load, then export the same PNG to
+`app/opengraph-image.png` and `app/twitter-image.png`. The preview embeds local
+assets and has no remote dependencies. Georgia is used for the italic serif on
+the design machine, with Times New Roman as a fallback; the exported PNGs require
+no fonts on the deployment server. Generated previews are Git-ignored.

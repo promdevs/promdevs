@@ -8,6 +8,11 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
 
 # debug
 npm-debug.log*
@@ -16,11 +21,8 @@ yarn-error.log*
 pnpm-debug.log*
 
 # local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
 
 # typescript
 *.tsbuildinfo
@@ -28,6 +30,8 @@ pnpm-debug.log*
 # Local browser verification artifacts
 .playwright-cli/
 output/playwright/
+output/social/
+output/security/
 
 # Local recovery copies; never publish database exports.
 .local-backups/
