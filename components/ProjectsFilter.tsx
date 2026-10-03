@@ -5,6 +5,8 @@ import { Search, X } from "lucide-react";
 import { type Project } from "@/db/schema";
 import { ProjectCard } from "@/components/ProjectCard";
 import { cn } from "@/lib/utils";
+import { ActionLink } from "@/components/Action";
+import { MotionReveal } from "@/components/MotionReveal";
 
 const ALL = "All";
 
@@ -37,6 +39,18 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
     });
   }, [projects, query, activeCategory]);
 
+  if (projects.length === 0) {
+    return (
+      <MotionReveal className="project-empty-state">
+        <p>
+          Project stories are being prepared. In the meantime, tell us what
+          you&apos;re building.
+        </p>
+        <ActionLink href="/#contact" label="Discuss your project" />
+      </MotionReveal>
+    );
+  }
+
   return (
     <div>
       {/* Controls */}
@@ -45,6 +59,7 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
           <input
+            aria-label="Search projects"
             type="search"
             placeholder="Search projects, tech, category…"
             value={query}
@@ -67,12 +82,13 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
           {categories.map((cat) => (
             <button
               key={cat}
+              aria-pressed={activeCategory === cat}
               onClick={() => setActiveCategory(cat)}
               className={cn(
-                "rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all",
+                "project-filter rounded-full border px-3.5 py-1.5 text-xs font-medium",
                 activeCategory === cat
                   ? "border-accent bg-accent text-white"
-                  : "border-neutral-200 bg-white text-neutral-600 hover:border-accent/50 hover:text-accent dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300"
+                  : "border-neutral-200 bg-white text-neutral-600 hover:border-accent/50 hover:text-accent dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300",
               )}
             >
               {cat}
@@ -90,16 +106,21 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
 
       {/* Grid */}
       {filtered.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
           {filtered.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-neutral-200 py-20 dark:border-white/10">
-          <p className="text-sm font-medium text-neutral-500">No projects match your search.</p>
+          <p className="text-sm font-medium text-neutral-500">
+            No projects match your search.
+          </p>
           <button
-            onClick={() => { setQuery(""); setActiveCategory(ALL); }}
+            onClick={() => {
+              setQuery("");
+              setActiveCategory(ALL);
+            }}
             className="mt-3 text-sm text-accent hover:underline"
           >
             Clear filters

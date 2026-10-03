@@ -1,44 +1,59 @@
+import { ActionLink } from "@/components/Action";
 import { MotionReveal } from "@/components/MotionReveal";
+import { Star } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="mx-auto w-full max-w-6xl px-6 pb-16 pt-20 sm:pt-24">
-      <MotionReveal>
-        <div className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-soft dark:border-white/10 dark:bg-neutral-950 dark:shadow-soft-dark sm:p-12">
-          <MotionReveal delayMs={80}>
-            <p className="mb-4 inline-block rounded-full border border-accent/30 px-3 py-1 text-xs font-medium uppercase tracking-[0.12em] text-accent">
-              Build • Hire • Showcase
-            </p>
+    <section className="hero studio-hero" aria-labelledby="hero-title">
+      <div className="shell studio-hero-content">
+        <MotionReveal entrance className="hero-proof-line">
+          <p className="eyebrow">Digital product studio</p>
+          <p className="hero-rating">
+            <span className="sr-only">
+              Rated 4.99 out of 5, based on 100+ ratings.
+            </span>
+            <span className="hero-rating-content" aria-hidden="true">
+              <span className="hero-rating-stars">
+                {Array.from({ length: 5 }, (_, index) => (
+                  <Star
+                    key={index}
+                    size={11}
+                    fill="currentColor"
+                    strokeWidth={0}
+                  />
+                ))}
+              </span>
+              <span className="hero-rating-score">
+                4.99<span>/5</span>
+              </span>
+              <span className="hero-rating-count">100+ ratings</span>
+            </span>
+          </p>
+        </MotionReveal>
+        <h1 id="hero-title">
+          <MotionReveal as="span" entrance delayMs={90}>
+            Your next big idea.
+          </MotionReveal>{" "}
+          <MotionReveal as="span" entrance delayMs={180}>
+            <em>Beautifully built.</em>
           </MotionReveal>
-          <MotionReveal delayMs={120}>
-            <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-black dark:text-white sm:text-5xl">
-              Build products. Hire developers. Showcase great work.
-            </h1>
-          </MotionReveal>
-          <MotionReveal delayMs={180}>
-            <p className="mt-6 max-w-3xl text-lg leading-relaxed text-neutral-700 dark:text-neutral-300">
-              We build and ship modern web products, and connect product teams
-              with vetted developers ready to hit the ground running.
-            </p>
-          </MotionReveal>
-          <MotionReveal delayMs={260}>
-            <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-              <a
-                href="#contact"
-                className="inline-flex items-center justify-center rounded-2xl border border-accent bg-accent px-6 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black"
-              >
-                Contact us
-              </a>
-              {/* <a
-                href="#work"
-                className="inline-flex items-center justify-center rounded-2xl border border-neutral-300 bg-white px-6 py-3 text-sm font-medium text-neutral-900 transition hover:-translate-y-0.5 hover:border-accent hover:text-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:border-white/20 dark:bg-black dark:text-white dark:focus-visible:ring-offset-black"
-              >
-                See our work
-              </a> */}
-            </div>
-          </MotionReveal>
-        </div>
-      </MotionReveal>
+        </h1>
+        <MotionReveal entrance delayMs={270}>
+          <p className="hero-description">
+            PromDevs designs and builds web apps, mobile apps, and AI products
+            for founders and brands. Starting fresh or improving an existing
+            product, we help you move from idea to launch.
+          </p>
+        </MotionReveal>
+        <MotionReveal entrance delayMs={360} className="hero-actions">
+          <ActionLink href="#contact" label="Start a project" />
+          <ActionLink
+            href="/projects"
+            label="View our work"
+            variant="secondary"
+          />
+        </MotionReveal>
+      </div>
     </section>
   );
 }

@@ -1,58 +1,42 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-type Theme = "light" | "dark";
-
-function readTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-
-  const stored = localStorage.getItem("theme");
-  if (stored === "light" || stored === "dark") {
-    return stored;
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
-
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    const currentTheme = readTheme();
-    setTheme(currentTheme);
-    document.documentElement.classList.toggle("dark", currentTheme === "dark");
-    setMounted(true);
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = () => {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem("theme");
+      } catch {}
+      document.documentElement.classList.toggle(
+        "dark",
+        stored === "dark" || (stored !== "light" && media.matches),
+      );
+    };
+    sync();
+    media.addEventListener("change", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      media.removeEventListener("change", sync);
+      window.removeEventListener("storage", sync);
+    };
   }, []);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    localStorage.setItem("theme", nextTheme);
-    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+  const toggle = () => {
+    const dark = document.documentElement.classList.toggle("dark");
+    try {
+      localStorage.setItem("theme", dark ? "dark" : "light");
+    } catch {}
   };
-
   return (
-    <Button
+    <button
       type="button"
-      variant="secondary"
-      size="icon"
-      aria-label="Toggle theme"
-      onClick={toggleTheme}
-      className="h-10 w-10"
+      onClick={toggle}
+      className="icon-button theme-toggle"
+      aria-label="Toggle color theme"
     >
-      {mounted && theme === "dark" ? (
-        <Sun aria-hidden className="h-4 w-4" />
-      ) : (
-        <Moon aria-hidden className="h-4 w-4" />
-      )}
-    </Button>
+      <Sun className="hidden dark:block" size={16} aria-hidden />
+      <Moon className="dark:hidden" size={16} aria-hidden />
+    </button>
   );
 }

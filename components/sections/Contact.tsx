@@ -2,8 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { MotionReveal } from "@/components/MotionReveal";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { ActionButton } from "@/components/Action";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -22,7 +21,7 @@ const initialValues: ContactPayload = {
   email: "",
   subject: "",
   message: "",
-  company: ""
+  company: "",
 };
 
 export function Contact() {
@@ -42,10 +41,13 @@ export function Contact() {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(form),
       });
 
-      const body = (await response.json()) as { error?: string; message?: string };
+      const body = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
       if (!response.ok) {
         throw new Error(body.error ?? "Failed to send message.");
       }
@@ -56,7 +58,7 @@ export function Contact() {
     } catch (error) {
       setStatus("error");
       setFeedback(
-        error instanceof Error ? error.message : "Failed to send message."
+        error instanceof Error ? error.message : "Failed to send message.",
       );
     } finally {
       setSubmitting(false);
@@ -64,119 +66,124 @@ export function Contact() {
   };
 
   return (
-    <section id="contact" className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
+    <section
+      id="contact"
+      className="shell contact-section"
+      aria-labelledby="contact-title"
+    >
       <MotionReveal>
-        <Card className="p-2 sm:p-4">
-          <CardHeader className="pb-2">
-          <h2 className="text-3xl font-semibold tracking-tight">Contact Us</h2>
-          <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
-            Share a bit about your project and we&apos;ll follow up shortly.
-          </p>
-          </CardHeader>
-          <CardContent>
-
-        <form className="mt-8 space-y-5" onSubmit={onSubmit}>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">
-                Name
-              </label>
+        <p className="eyebrow">03 / Start a conversation</p>
+        <h2 id="contact-title" className="section-heading">
+          Something
+          <br />
+          on your mind?
+        </h2>
+        <p className="intro-copy">
+          A new idea. A product to improve. A team to build. Tell us what
+          you&apos;re thinking, and let&apos;s find a way forward.
+        </p>
+      </MotionReveal>
+      <MotionReveal delayMs={100}>
+        <form
+          className="contact-form"
+          onSubmit={onSubmit}
+          aria-busy={submitting}
+        >
+          <fieldset disabled={submitting}>
+            <div className="form-pair">
+              <div className="field">
+                <label htmlFor="name">Your name</label>
+                <Input
+                  id="name"
+                  name="name"
+                  autoComplete="name"
+                  placeholder="Alex Morgan"
+                  required
+                  maxLength={100}
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, name: event.target.value }))
+                  }
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="email">Email address</label>
+                <Input
+                  id="email"
+                  name="email"
+                  autoComplete="email"
+                  type="email"
+                  placeholder="alex@company.com"
+                  required
+                  maxLength={320}
+                  value={form.email}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, email: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="field">
+              <label htmlFor="subject">What can we help with?</label>
               <Input
-                id="name"
-                name="name"
-                autoComplete="name"
+                id="subject"
+                name="subject"
+                placeholder="A new product, a fresh perspective..."
                 required
-                value={form.name}
+                maxLength={150}
+                value={form.subject}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, name: event.target.value }))
+                  setForm((prev) => ({ ...prev, subject: event.target.value }))
                 }
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                Email
-              </label>
-              <Input
-                id="email"
-                name="email"
-                autoComplete="email"
-                type="email"
+            <div className="field">
+              <label htmlFor="message">A little about your project</label>
+              <Textarea
+                id="message"
+                name="message"
+                placeholder="The idea, the challenge, the possibilities."
                 required
-                value={form.email}
+                rows={3}
+                maxLength={5000}
+                value={form.message}
                 onChange={(event) =>
-                  setForm((prev) => ({ ...prev, email: event.target.value }))
+                  setForm((prev) => ({ ...prev, message: event.target.value }))
                 }
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="subject" className="text-sm font-medium">
-              Subject
-            </label>
-            <Input
-              id="subject"
-              name="subject"
-              required
-              value={form.subject}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, subject: event.target.value }))
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="message" className="text-sm font-medium">
-              Message
-            </label>
-            <Textarea
-              id="message"
-              name="message"
-              required
-              rows={5}
-              value={form.message}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, message: event.target.value }))
-              }
-            />
-          </div>
-
-          <div className="hidden" aria-hidden="true">
-            <label htmlFor="company">Company</label>
-            <input
-              id="company"
-              name="company"
-              tabIndex={-1}
-              autoComplete="off"
-              value={form.company}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, company: event.target.value }))
-              }
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            <Button
+            <div hidden aria-hidden="true">
+              <label htmlFor="company">Company</label>
+              <input
+                id="company"
+                name="company"
+                tabIndex={-1}
+                autoComplete="off"
+                value={form.company}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, company: event.target.value }))
+                }
+              />
+            </div>
+            <ActionButton
               type="submit"
               disabled={submitting}
-            >
-              {submitting ? "Sending..." : "Send message"}
-            </Button>
-
-            {status !== "idle" && (
-              <p
-                role="status"
-                className={`text-sm ${
-                  status === "success" ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {feedback}
-              </p>
-            )}
-          </div>
+              className="submit-button"
+              label={submitting ? "Sending..." : "Send your message"}
+              loading={submitting}
+            />
+          </fieldset>
+          <p
+            role="status"
+            aria-live="polite"
+            className={
+              "form-feedback " +
+              (status === "error" ? "text-red-700 dark:text-red-400" : "muted")
+            }
+          >
+            {feedback}
+          </p>
         </form>
-          </CardContent>
-        </Card>
       </MotionReveal>
     </section>
   );

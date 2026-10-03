@@ -24,3 +24,10 @@ pnpm-debug.log*
 
 # typescript
 *.tsbuildinfo
+
+# Local browser verification artifacts
+.playwright-cli/
+output/playwright/
+
+# Local recovery copies; never publish database exports.
+.local-backups/
