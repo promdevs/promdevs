@@ -224,6 +224,24 @@ A successful response verifies liveness, not database or email readiness. If
 the new image still says the command is missing, confirm the deployed commit
 and Dockerfile Location, then rebuild without cache if necessary.
 
+## Admin loads but login/session requests return 502
+
+Check the admin container's Nginx logs. `upstream SSL certificate verify error`
+with `unable to get local issuer certificate` means the HTTPS API proxy failed
+certificate-chain verification, not that the admin password is incorrect.
+The template explicitly allows a verification depth of three for cross-signed
+intermediates; Nginx's default is one. Verification remains enabled against the
+container's CA bundle. See
+[Nginx verification depth](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_ssl_verify_depth).
+
+Push the updated `deploy/admin.nginx.conf.template` and redeploy **admin only**.
+Keep `API_UPSTREAM=https://api.promdevs.com`. An unauthenticated request to
+`https://admin.promdevs.com/api/admin/session` should return 401 once admin
+credentials are configured, not 502. Do not turn `proxy_ssl_verify` off.
+If TLS errors persist, inspect the deployed template, CA bundle, and the API's
+presented certificate chain from inside the container; never download arbitrary
+certificates into the trust store to work around an unverified issuer.
+
 ## Security and operational limitations
 
 - Keep `TRUST_PROXY=false` until every ingress path sanitizes `X-Forwarded-For`
