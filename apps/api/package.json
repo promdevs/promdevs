@@ -1,0 +1,31 @@
+{
+  "name": "@promdevs/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts",
+    "db:migrate": "drizzle-kit migrate",
+    "admin:password": "tsx scripts/hash-password.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0",
+    "dotenv": "17.4.2",
+    "drizzle-orm": "0.45.2",
+    "resend": "6.28.0",
+    "@promdevs/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4",
+    "typescript": "6.0.3",
+    "tsx": "4.23.13",
+    "drizzle-kit": "0.31.10"
+  }
+}

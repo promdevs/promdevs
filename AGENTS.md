@@ -1,9 +1,9 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# PromDevs workspace
 
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+- Use pnpm 10.32.1 and Node.js 24. Do not add npm or Yarn lockfiles.
+- Public website: `apps/web`; admin: `apps/admin`; API: `apps/api`.
+- Shared contracts live in `packages/contracts`; browser-safe UI in `packages/ui`.
+- Database access, credentials, and email sending belong exclusively in the API.
+- Do not run migrations or mutate live data without explicit authorization.
+- Read `apps/web/AGENTS.md` and the installed Next.js guides before editing Next.js code.
+- Validate with `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`.
