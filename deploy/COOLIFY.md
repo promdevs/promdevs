@@ -56,6 +56,8 @@ workspace and shared packages. No custom install/build/start command is needed;
 the Dockerfiles provide them. Leave host Port Mappings empty; use the Coolify
 HTTPS proxy rather than publishing application ports on the server.
 All three images already include a HEALTHCHECK.
+The API and web runtime images install `curl`; the Alpine admin image provides
+`wget`. This also supports Coolify versions that generate their own HTTP checks.
 See [Dockerfile deployment](https://coolify.io/docs/applications/builds/dockerfile)
 and [health checks](https://coolify.io/docs/applications/configuration/health-checks).
 
@@ -202,6 +204,25 @@ server-to-server API requests with an interactive browser challenge.
 
 If you want complete manual control, keep Auto Deploy off and select Deploy on
 the individual resource when ready. There is no need to redeploy all three.
+
+## Health check reports curl or wget not found
+
+If the application starts but Coolify rolls back with `curl: not found` and
+`wget: not found`, its HTTP check cannot run inside the image. Installing tools
+on the Hetzner host does not install them in the application container.
+
+Push the updated Dockerfiles and redeploy the affected application from that
+commit. Keep the API check on HTTP port `4000`, path `/health`; the web check
+uses port `3000`, path `/`. Do not disable monitoring just to conceal a failed
+check. In the API container terminal, verify:
+
+```sh
+curl --fail --silent --show-error http://127.0.0.1:4000/health
+```
+
+A successful response verifies liveness, not database or email readiness. If
+the new image still says the command is missing, confirm the deployed commit
+and Dockerfile Location, then rebuild without cache if necessary.
 
 ## Security and operational limitations
 
