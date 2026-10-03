@@ -1,0 +1,11 @@
+title = "PromDevs secret scanning"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "database-connection-credentials"
+description = "Embedded database passwords in connection strings"
+regex = '''(?i)(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/[^\s:/]+:([^\s@/]+)@[^\s"']+'''
+secretGroup = 1
+keywords = ["postgres", "mysql", "mongodb"]

@@ -1,122 +1,229 @@
-# PromDevs v2
+# PromDevs
 
-Landing page built with Next.js App Router, TypeScript, and Tailwind CSS.
+A pnpm workspace with independently deployable public website, studio admin, and API.
+The existing public design, routes, project schema, and experimental assets are preserved.
 
-## Features
+## Workspace
 
-- Sticky header with brand lockup and anchor nav.
-- Dark/light theme toggle (system default + localStorage persistence).
-- Sections: Hero, Services, About, Contact; portfolio routes at `/projects`.
-- Contact form with:
-  - Client-side required validation.
-  - Server-side validation (Zod).
-  - Honeypot spam check (`company` must be empty).
-  - In-memory IP rate limit (5 requests / 10 minutes).
-  - Resend email sending, with a safe fallback to server logs if env vars are missing.
-- SEO metadata + OpenGraph/Twitter.
-- `robots.txt` and `sitemap.xml` route handlers.
+| Package               | Location             | Purpose                                                        |
+| --------------------- | -------------------- | -------------------------------------------------------------- |
+| `@promdevs/web`       | `apps/web`           | Next.js App Router website; server-rendered project pages      |
+| `@promdevs/admin`     | `apps/admin`         | React + Vite project-management dashboard                      |
+| `@promdevs/api`       | `apps/api`           | Node.js/TypeScript API; Neon, Resend, and admin authentication |
+| `@promdevs/contracts` | `packages/contracts` | Shared Zod schemas, API payloads, and TypeScript types         |
+| `@promdevs/ui`        | `packages/ui`        | Browser-safe shared wordmark and button primitives             |
 
-## Tech
+Use Node.js 24 (`.nvmrc`) and **pnpm 10.32.1**, pinned in `packageManager`.
+Existing direct dependency versions were retained from the npm lockfile. New admin
+build tooling was added separately. Use only `pnpm-lock.yaml`; do not mix lockfiles.
+No Turborepo, external auth subscription, or paid deployment service is required.
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- Resend
-- Zod
+## Local Setup
 
-## Setup
-
-1. Install dependencies:
-
-```bash
-npm install
+```sh
+npm install --global pnpm@10.32.1
+pnpm install --frozen-lockfile
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local
+pnpm dev
 ```
 
-1. Configure environment variables:
+The one npm command bootstraps pnpm; it does not install application dependencies.
+If your old Next.js process is still running, stop it before starting the workspace.
 
-```bash
-cp .env.example .env.local
+| Application | Local URL                    |
+| ----------- | ---------------------------- |
+| Website     | http://localhost:3000        |
+| Admin       | http://localhost:5173        |
+| API health  | http://127.0.0.1:4000/health |
+
+`pnpm dev` builds contracts, then starts all three apps. The API reads its local
+`.env.local`, then `.env`; the old root `.env` is a development-only fallback.
+Existing shell variables take precedence. The website does **not** load the root
+credentials. Production gets secrets from Coolify, not committed environment files.
+After changing contracts, restart `pnpm dev` to rebuild the shared package.
+
+### Environment Variables
+
+**API only** (`apps/api/.env` locally; Coolify API runtime variables in production):
+
+- `DATABASE_URL`: existing Neon PostgreSQL connection string; required for projects.
+- `RESEND_API_KEY`, `CONTACT_TO_EMAIL`: required for real email delivery.
+- `CONTACT_FROM_EMAIL`: defaults to `onboarding@resend.dev`; verify your own sender domain for production.
+- `CONTACT_FROM_NAME`, `CONTACT_TO_NAME`: optional email display names.
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`: both required to enable admin login.
+- `ADMIN_ORIGIN`: exact admin origin, e.g. `http://localhost:5173` locally or `https://admin.promdevs.com` in production. No trailing slash or wildcard.
+- `PORT`, `HOST`: default `4000` / `127.0.0.1`; the API Dockerfile sets `HOST=0.0.0.0`.
+- `NODE_ENV=production`: enables secure session cookies and disables local dotenv fallbacks.
+- `TRUST_PROXY`: false by default. Enable only when every path to the API is behind a trusted ingress that sanitizes `X-Forwarded-For`; prevent direct origin access. Otherwise use socket IPs. A shared proxy IP means requests share a rate-limit bucket.
+
+**Website only** (`apps/web/.env.local` or Coolify web runtime variables):
+
+- `API_BASE_URL`: server-side API origin, default `http://127.0.0.1:4000`. Set an internal Coolify service URL or the HTTPS API domain in production. No database or email credentials belong in the web app.
+
+**Admin:**
+
+- `API_PROXY_TARGET`: local Vite development/preview proxy target, default `http://127.0.0.1:4000`.
+- `API_UPSTREAM`: production Nginx proxy target, set on the admin container. No trailing slash; e.g. `http://<api-service-name>:4000` or `https://api.promdevs.com`.
+
+Never place credentials in `VITE_*` or `NEXT_PUBLIC_*` variables.
+
+### Enable Your Administrator
+
+Run the hidden-input password generator in an interactive terminal:
+
+```sh
+pnpm admin:password
 ```
 
-Required for live email sending:
+Use a unique password of at least 16 characters. Set the generated scrypt hash and
+`ADMIN_EMAIL` on the API, then restart it. Quote the hash with single quotes in dotenv
+files. Do not put the password in a command argument, commit it, or publish the hash.
+There is no registration endpoint or default administrator/password.
 
-- `RESEND_API_KEY`
-- `CONTACT_TO_EMAIL`
+The admin manages real projects: list/search, create, edit, feature, and delete,
+including case-study copy, links, technologies, and tags. Saved records are public.
+Status is descriptive, **not** a draft/publish switch. Uploads, draft workflows,
+multi-user roles, MFA, and client-story management are not implemented yet.
+The public website retains its existing empty portfolio state when no projects exist.
 
-Optional:
+Authentication uses salted scrypt, random opaque sessions, HttpOnly/SameSite=Strict
+cookies, origin checks on writes, login throttling, and server-side authorization
+for every admin route. The admin proxies `/api` through its own origin, so browser
+cookies are not shared across domains and no permissive CORS policy is needed.
+Use HTTPS in production. You can add Cloudflare Access as another protective layer.
 
-- `CONTACT_FROM_EMAIL` (defaults to `onboarding@resend.dev`)
+Sessions last eight hours and are held in memory; an API restart signs users out.
+Run **one API replica** for this initial implementation. Shared persistent sessions
+and rate-limit storage are required before scaling to multiple replicas.
 
-1. Start development server:
+## Commands
 
-```bash
-npm run dev
+```sh
+pnpm dev                # all three apps
+pnpm dev:web            # website only (API needed for projects/contact)
+pnpm dev:admin          # admin only (API needed for login/content)
+pnpm dev:api            # API only
+pnpm lint
+pnpm typecheck
+pnpm test               # isolated fixtures; no database writes or emails
+pnpm build              # build all packages in dependency order
+pnpm build:web          # web and its shared dependencies
+pnpm build:admin
+pnpm build:api
+pnpm start              # built web app
+pnpm --filter @promdevs/api start
+pnpm --filter @promdevs/admin preview
 ```
 
-1. Open [http://localhost:3000](http://localhost:3000).
+The web build uses Webpack because the local Turbopack sandbox previously failed.
+The website and admin can build without a running API or database credentials.
+The root verification workflow runs frozen installs, lint, types, tests, and builds.
 
-## Contact API
+Database migrations were moved unchanged to `apps/api/drizzle`. Do not run migrations
+against production without review, authorization, and a backup. When explicitly
+needed, `pnpm db:migrate` uses the existing API schema/config. No seed data is added.
 
-- Endpoint: `POST /api/contact`
-- Payload:
+## API
 
-```json
-{
-  "name": "Jane Doe",
-  "email": "jane@example.com",
-  "subject": "Project inquiry",
-  "message": "Let us discuss a build.",
-  "company": ""
-}
+| Method / endpoint                | Behavior                                                   |
+| -------------------------------- | ---------------------------------------------------------- |
+| `GET /health`                    | Process liveness; does not assert database/email readiness |
+| `GET /api/projects`              | Public project catalog                                     |
+| `GET /api/projects/:slug`        | Public project detail; 404 if absent                       |
+| `POST /api/contact`              | Validated email; honeypot; max 5 requests/IP/10 minutes    |
+| `POST /api/admin/login`          | Configured administrator login                             |
+| `GET /api/admin/session`         | Authenticated session identity                             |
+| `POST /api/admin/logout`         | Revoke session and clear cookie                            |
+| `GET /api/admin/projects`        | Authenticated catalog                                      |
+| `POST /api/admin/projects`       | Authenticated create                                       |
+| `PUT /api/admin/projects/:id`    | Authenticated full update                                  |
+| `DELETE /api/admin/projects/:id` | Authenticated delete                                       |
+
+The website's `/api/contact` remains a same-origin, bounded-body proxy, preserving
+its existing form interface. The API owns final validation, rate limiting, honeypot
+checking, and email delivery. Payload: `{ name, email, subject, message, company }`.
+If Resend is unconfigured, the existing explicit TODO server-log fallback remains.
+Logs can contain contact PII; protect log access and retention. Provider/database
+errors are never returned verbatim. API body size is limited to 64 KiB.
+
+Project pages fetch server-side without caching so admin changes are visible on the
+next request. Missing projects return 404; service outages on detail pages produce
+an error rather than a false 404. The homepage remains statically rendered. A public
+content cache with invalidation can be added later without changing the API contract.
+
+## Separate Coolify Deployments
+
+Follow [the step-by-step Coolify guide](deploy/COOLIFY.md) for independent triggers,
+copyable watch paths, per-app variables, DNS, and first-deployment checks.
+
+Connect this repository three times as separate **Dockerfile** applications. Use
+the repository root as the build context; workspace packages must be available.
+
+| App   | Dockerfile                | Container port | Suggested domain                    |
+| ----- | ------------------------- | -------------- | ----------------------------------- |
+| Web   | `deploy/web.Dockerfile`   | 3000           | `promdevs.com` / `www.promdevs.com` |
+| Admin | `deploy/admin.Dockerfile` | 80             | `admin.promdevs.com`                |
+| API   | `deploy/api.Dockerfile`   | 4000           | `api.promdevs.com`                  |
+
+Configure API secrets only on the API. Deploy it first; set the web `API_BASE_URL`
+and admin `API_UPSTREAM` to reachable addresses. The default admin upstream `api`
+is only an example service hostname, not a guaranteed Coolify-generated name.
+If using the public HTTPS API, Nginx verifies its TLS certificate. If using internal
+HTTP, keep it on a private container network. No environment secrets are build args.
+
+Suggested Coolify watch paths:
+
+- Web: `apps/web/**`, `packages/contracts/**`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `deploy/web.Dockerfile`.
+- Admin: `apps/admin/**`, `packages/contracts/**`, `packages/ui/**`, shared root config/lockfiles, `deploy/admin*`.
+- API: `apps/api/**`, `packages/contracts/**`, shared root config/lockfiles, `deploy/api.Dockerfile`.
+
+Proxy public domains through Cloudflare and use Full (strict) TLS with valid origin
+certificates. Do not cache admin HTML, authentication endpoints, mutations, or private
+API responses. Public API responses currently use `no-store` too. Allow legitimate
+search crawlers on the website. Protect the origin, maintain off-server database
+backups, and monitor uptime. Three containers on one VPS are not high availability.
+No production deployment is performed by this repository setup.
+
+The admin has noindex metadata, a disallow-all robots file, and Nginx security headers.
+These are indexing controls, **not** substitutes for backend authentication.
+
+## Public Design And Social Previews
+
+The website retains monochrome stippling, self-hosted DM Sans/Space Grotesk,
+light/dark theme persistence, responsive navigation, and reduced-motion support.
+Experimental Apollo/ribbon assets stay unused in `apps/web/public` and components;
+Spline provenance and source experiments remain in `design/`.
+
+Open Graph and Twitter use the existing 1200 x 630 PNGs and descriptive alt files in
+`apps/web/app`. Prepare the editable composition with:
+
+```sh
+pnpm social:prepare
 ```
 
-Responses:
+Render `output/social/preview.html` in Chromium at 1200 x 630, device scale factor 1,
+after fonts load; export the PNG to `apps/web/app/opengraph-image.png` and
+`apps/web/app/twitter-image.png`. All assets are local. Georgia supplies the italic
+serif on the design machine; the static exported images need no fonts in production.
+The existing public GA4 measurement ID is intentionally not a private credential.
 
-- `200` success.
-- `400` validation/honeypot failure.
-- `429` rate limit exceeded.
-- `500` provider or server error.
+## Secret Protection
 
-If Resend is not configured, submissions are accepted and logged server-side with a clear TODO log line.
+All local environment files, private keys, database backups, build outputs, and
+verification artifacts are ignored. `.dockerignore` also excludes secrets and
+recovery exports from build contexts. Examples contain only blank credentials.
+The website has no database/email dependencies and its API client uses `server-only`.
 
-## September 2026 design and dependency refresh
+The pinned, checksum-verified Gitleaks workflow scans Git history on pushes and pull
+requests with redacted output. Scan locally with:
 
-The homepage, project index, and project detail pages share a textured monochrome design.
-Light mode uses neutral white and gray; dark mode uses near-black and charcoal. Theme follows
-the system until manually selected, then persists in localStorage. The active stipple texture
-lives at public/images/stipple.svg; palette and layout tokens live in app/globals.css.
-DM Sans and Space Grotesk are self-hosted through Fontsource. Motion respects reduced-motion
-preferences and page content remains visible without JavaScript.
+```sh
+gitleaks git --log-opts="--all" --redact=100 --no-banner .
+pnpm audit --prod
+```
 
-### Runtime and versions
-
-Use Node.js 24 LTS (see .nvmrc). Next.js 16.3.5, React 19.3.0, Tailwind CSS 4.3.3,
-Lucide, Resend, Zod, and the other stable dependencies were updated against npm's stable tags.
-TypeScript stays on the newest 6.x release because typescript-eslint does not yet support 7.0.
-ESLint stays on the newest 9.x release because the plugins bundled with Next's config do not
-support ESLint 10. The existing experimental Neon PostgREST package was not switched to beta.
-
-Run npm run lint, npm run typecheck, and npm run build to verify changes.
-Run npm run format to format application source.
-Production hosting remains planned for Hetzner/Coolify; this change does not deploy anything.
-
-### Existing project data
-
-The project routes continue to read the existing Neon/Drizzle project table. DATABASE_URL
-must be configured for those routes and for project prerendering during a production build.
-The demo project catalog and seed command have been removed. Only real project records
-should be added to this table. When it is empty, the portfolio shows a contact invitation
-without sample cards or filter controls; unavailable project slugs return 404 and are omitted
-from the sitemap. Local recovery exports are kept in `.local-backups/`, which is Git-ignored.
-Future backend integration can replace this data source independently of the page layouts.
-
-### Dependency audit
-
-At the time of the refresh, npm audit --omit=dev reports zero vulnerabilities. Four moderate
-advisories remain in the development-only drizzle-kit / esbuild dependency chain. npm's forced
-fix proposes a breaking downgrade of drizzle-kit; that downgrade was deliberately not applied.
-
-### Analytics
-
-The existing GA4 measurement ID is retained. The old GoogleTagManager component was removed
-because its supplied ID was a G- measurement ID, not a GTM- container ID.
+If a credential is ever committed, revoke/rotate it before coordinating any history
+cleanup. Never assume deleting the file makes the old value safe. Do not commit
+secret-bearing scan reports. Known development-tooling advisories should be reviewed
+without blindly applying breaking `audit fix --force` downgrades.
