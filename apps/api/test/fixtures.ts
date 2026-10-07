@@ -1,15 +1,25 @@
 import type { Project, ProjectInput } from "@promdevs/contracts";
-import type { ProjectStore } from "../src/projects.js";
+import type { ProjectStore, ProjectReadScope } from "../src/projects.js";
+import type { PublicationStatus } from "../src/db/schema.js";
 
 // Test-only storage: never selected by the production API or connected to Neon.
 export class MemoryProjects implements ProjectStore {
   private rows: Project[] = [];
+  private publication = new Map<number, PublicationStatus>();
   private nextId = 1;
-  async list() {
-    return [...this.rows];
+  async list(scope: ProjectReadScope = "public") {
+    return this.rows.filter(
+      (row) =>
+        scope === "admin" || this.publication.get(row.id) === "published",
+    );
   }
   async bySlug(slug: string) {
-    return this.rows.find((row) => row.slug === slug) ?? null;
+    return (
+      this.rows.find(
+        (row) =>
+          row.slug === slug && this.publication.get(row.id) === "published",
+      ) ?? null
+    );
   }
   async create(input: ProjectInput) {
     if (this.rows.some((row) => row.slug === input.slug))
@@ -20,6 +30,7 @@ export class MemoryProjects implements ProjectStore {
       createdAt: new Date().toISOString(),
     };
     this.rows.push(row);
+    this.publication.set(row.id, "draft");
     return row;
   }
   async update(id: number, input: ProjectInput) {
@@ -33,6 +44,10 @@ export class MemoryProjects implements ProjectStore {
   async remove(id: number) {
     const count = this.rows.length;
     this.rows = this.rows.filter((row) => row.id !== id);
+    this.publication.delete(id);
     return this.rows.length < count;
+  }
+  setPublication(id: number, status: PublicationStatus) {
+    this.publication.set(id, status);
   }
 }

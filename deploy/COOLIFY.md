@@ -115,6 +115,10 @@ tsconfig.base.json
 
 ## 3. Configure runtime variables
 
+For optional Cloudflare R2 media storage, follow [storage setup](../docs/storage.md).
+R2 credentials belong only on the API as runtime variables. There is no storage
+container or persistent Hetzner volume to add, and upload UI/routes are not enabled.
+
 In Configuration > Environment Variables, enable Runtime Variable and disable
 Build Variable for these settings. The builds need no production credentials.
 Add secrets in the Normal view; enable Literal for the password hash so its `$`

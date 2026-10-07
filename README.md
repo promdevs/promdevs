@@ -1,7 +1,7 @@
 # PromDevs
 
 A pnpm workspace with independently deployable public website, studio admin, and API.
-The existing public design, routes, project schema, and experimental assets are preserved.
+The public design, routes, and experimental assets are preserved. The API owns the canonical portfolio database schema.
 
 ## Workspace
 
@@ -56,6 +56,8 @@ After changing contracts, restart `pnpm dev` to rebuild the shared package.
 - `PORT`, `HOST`: default `4000` / `127.0.0.1`; the API Dockerfile sets `HOST=0.0.0.0`.
 - `NODE_ENV=production`: enables secure session cookies and disables local dotenv fallbacks.
 - `TRUST_PROXY`: false by default. Enable only when every path to the API is behind a trusted ingress that sanitizes `X-Forwarded-For`; prevent direct origin access. Otherwise use socket IPs. A shared proxy IP means requests share a rate-limit bucket.
+- `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`: optional Cloudflare R2 configuration, required together when storage is used. API runtime only.
+- `R2_PUBLIC_BASE_URL`: optional HTTPS media origin; set only after intentionally configuring public bucket delivery. See [storage setup](docs/storage.md).
 
 **Website only** (`apps/web/.env.local` or Coolify web runtime variables):
 
@@ -82,8 +84,10 @@ files. Do not put the password in a command argument, commit it, or publish the 
 There is no registration endpoint or default administrator/password.
 
 The admin manages real projects: list/search, create, edit, feature, and delete,
-including case-study copy, links, technologies, and tags. Saved records are public.
-Status is descriptive, **not** a draft/publish switch. Uploads, draft workflows,
+including case-study copy, links, technologies, and tags. New records are drafts.
+Public reads require `publication_status = published`; the existing `status`
+still describes work progress. The unchanged editor cannot publish or manage
+new schema fields/title-only drafts yet. Uploads, expanded draft workflows,
 multi-user roles, MFA, and client-story management are not implemented yet.
 The public website retains its existing empty portfolio state when no projects exist.
 
@@ -114,17 +118,34 @@ pnpm build:api
 pnpm start              # built web app
 pnpm --filter @promdevs/api start
 pnpm --filter @promdevs/admin preview
+pnpm db:status         # read-only migration-history check; requires DATABASE_URL
+pnpm db:generate --name=portfolio_schema  # offline SQL generation
+pnpm db:migrate        # preflight, then apply reviewed SQL; requires DATABASE_URL
+pnpm skills:import /absolute/path/skills.csv --dry-run # validate and check conflicts
+pnpm storage:check      # read-only R2 bucket access check; requires R2 configuration
 ```
 
 The web build uses Webpack because the local Turbopack sandbox previously failed.
 The website and admin can build without a running API or database credentials.
 The root verification workflow runs frozen installs, lint, types, tests, and builds.
 
-Database migrations were moved unchanged to `apps/api/drizzle`. Do not run migrations
-against production without review, authorization, and a backup. When explicitly
-needed, `pnpm db:migrate` uses the existing API schema/config. No seed data is added.
+The canonical schema is `apps/api/src/db/schema.ts`; no separate portfolio schema
+or config is needed. Historical migrations in `apps/api/drizzle` are preserved.
+Follow [the migration guide](docs/database-migrations.md) before applying changes:
+the old history contains duplicate table creation. `db:migrate` stops on unsafe
+history replay. No seed data, live migrations, or automatic startup migrations
+are performed. Migrate before deploying this API version.
 
 ## API
+
+Cloudflare R2 storage helpers are available in the API only. No upload routes or UI
+are exposed yet, and no bucket or live objects are created automatically. Follow
+[the storage guide](docs/storage.md) to configure credentials and Coolify. The
+initial helper supports JPEG/PNG/WebP images up to 10 MiB; other media comes later.
+
+Skills imports are explicit API-only operations, not startup seeds. The supplied
+24-row catalog has been imported with original IDs/timestamps. See
+[the repeat-safe import guide](docs/skills-import.md) before importing elsewhere.
 
 | Method / endpoint                | Behavior                                                   |
 | -------------------------------- | ---------------------------------------------------------- |

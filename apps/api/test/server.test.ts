@@ -151,7 +151,7 @@ test("incorrect email and password return the same login error", async () => {
   }
 });
 
-test("authenticated CRUD is reflected by the public catalog; logout revokes the token", async () => {
+test("admin CRUD creates drafts; only published projects are public; logout revokes the token", async () => {
   const cookie = await login();
   assert.deepEqual(
     await (
@@ -186,6 +186,19 @@ test("authenticated CRUD is reflected by the public catalog; logout revokes the 
   assert.equal(create.status, 201);
   const { project } = await create.json();
   assert.equal(project.slug, input.slug);
+  assert.deepEqual(await (await request("/api/projects")).json(), {
+    projects: [],
+  });
+  assert.equal((await request(`/api/projects/${input.slug}`)).status, 404);
+  assert.equal(
+    (
+      await (
+        await request("/api/admin/projects", "GET", undefined, cookie)
+      ).json()
+    ).projects.length,
+    1,
+  );
+  store.setPublication(project.id, "published");
   assert.equal(
     (await request("/api/admin/projects", "POST", input, cookie)).status,
     409,
@@ -201,6 +214,11 @@ test("authenticated CRUD is reflected by the public catalog; logout revokes the 
     (await (await request(`/api/projects/${input.slug}`)).json()).project.title,
     "Refined story",
   );
+  store.setPublication(project.id, "archived");
+  assert.equal((await request(`/api/projects/${input.slug}`)).status, 404);
+  assert.deepEqual(await (await request("/api/projects")).json(), {
+    projects: [],
+  });
   assert.equal(
     (
       await request(
