@@ -36,6 +36,15 @@ separate next step; project/client/review identity display is not wired to pages
 | `project_skills` | Many-to-many skill links with a composite primary key and display order. |
 | `contributors` | Internal people, not administrator accounts. |
 | `project_contributors` | Internal assignments with a composite primary key, role, and notes. |
+| `admin_users` | Administrator identities and fixed roles, defaulting to invited editors. |
+| `admin_sessions` | Hashed persistent-session records; not active in authentication yet. |
+| `admin_invitations` | Hashed, expiring one-time invitation records. |
+| `admin_audit_logs` | Security and content-action attribution. |
+
+The four administrator tables are a separate pending schema change, generated in
+`0004_admin_access_control.sql`, not a change to portfolio data. No owner was
+seeded and current login behavior is unchanged. See [admin access control](admin-access-control.md)
+for roles, migration review, activation boundaries, and later bootstrap steps.
 
 The unused `demo_users` definition is removed from the canonical schema. Historical
 migrations/snapshots remain intact, and no live table has been dropped. A future

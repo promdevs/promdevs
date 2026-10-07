@@ -16,6 +16,8 @@ import * as activeSchema from "../src/db/schema.js";
 import {
   legacyProjectFields,
   projectReadCondition,
+  projectEditCondition,
+  projectDeletionSql,
   serializeProject,
 } from "../src/projects.js";
 import { projectSchema } from "@promdevs/contracts";
@@ -30,6 +32,25 @@ const models = [
   reviews,
   skills,
 ];
+
+test("editor updates guard current draft state in SQL and deletion binds an atomic audit", () => {
+  const guarded = dialect.sqlToQuery(
+    projectEditCondition(42, { draftsOnly: true })!,
+  );
+  assert.match(guarded.sql, /"publication_status" = \$2/);
+  assert.deepEqual(guarded.params, [42, "draft"]);
+  const unrestricted = dialect.sqlToQuery(
+    projectEditCondition(42, { draftsOnly: false })!,
+  );
+  assert.doesNotMatch(unrestricted.sql, /publication_status/);
+  const actorId = "00000000-0000-4000-8000-000000000001";
+  const deletion = dialect.sqlToQuery(projectDeletionSql(42, actorId));
+  assert.match(deletion.sql, /WITH deleted AS/);
+  assert.match(deletion.sql, /INSERT INTO admin_audit_logs/);
+  assert.match(deletion.sql, /'project.deleted'/);
+  assert.deepEqual(deletion.params, [42, actorId]);
+  assert.ok(!deletion.sql.includes(actorId));
+});
 
 test("the canonical schema exports portfolio tables without the unused demo table", () => {
   assert.ok(!("demoUsers" in activeSchema));

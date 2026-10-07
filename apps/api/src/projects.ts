@@ -10,13 +10,34 @@ import {
 import { HttpError } from "./errors.js";
 
 export type ProjectReadScope = "public" | "admin";
+export type ProjectEditScope = { draftsOnly: boolean };
+
+export const projectEditCondition = (id: number, scope: ProjectEditScope) =>
+  and(
+    eq(projects.id, id),
+    scope.draftsOnly ? eq(projects.publicationStatus, "draft") : undefined,
+  );
+
+export const projectDeletionSql = (
+  id: number,
+  actorId: string,
+) => sql`WITH deleted AS (
+  DELETE FROM ${projects} WHERE ${projects.id} = ${id} RETURNING id
+), audited AS (
+  INSERT INTO admin_audit_logs (actor_id, action, target_type, target_id)
+  SELECT ${actorId}::uuid, 'project.deleted', 'project', id::text FROM deleted
+) SELECT id FROM deleted`;
 
 export interface ProjectStore {
   list(scope?: ProjectReadScope): Promise<Project[]>;
   bySlug(slug: string): Promise<Project | null>;
   create(input: ProjectInput): Promise<Project>;
-  update(id: number, input: ProjectInput): Promise<Project | null>;
-  remove(id: number): Promise<boolean>;
+  update(
+    id: number,
+    input: ProjectInput,
+    scope: ProjectEditScope,
+  ): Promise<Project | null>;
+  remove(id: number, actorId: string): Promise<boolean>;
 }
 
 // Preserve the current website/admin contract without selecting private columns.
@@ -124,19 +145,27 @@ export const projectStore: ProjectStore = {
       .returning(legacyProjectFields);
     return serializeProject(row);
   },
-  async update(id, input) {
+  async update(id, input, scope) {
     const [row] = await getDb()
       .update(projects)
       .set(databaseInput(input))
-      .where(eq(projects.id, id))
+      // Check the publication state in the UPDATE itself; a prior read would race publishing.
+      .where(projectEditCondition(id, scope))
       .returning(legacyProjectFields);
+    if (!row && scope.draftsOnly) {
+      const [existing] = await getDb()
+        .select({ id: projects.id })
+        .from(projects)
+        .where(eq(projects.id, id))
+        .limit(1);
+      if (existing)
+        throw new HttpError(403, "Editors can only edit draft projects.");
+    }
     return row ? serializeProject(row) : null;
   },
-  async remove(id) {
-    const rows = await getDb()
-      .delete(projects)
-      .where(eq(projects.id, id))
-      .returning({ id: projects.id });
-    return rows.length > 0;
+  async remove(id, actorId) {
+    // Deletion and its attribution must succeed or roll back together.
+    const rows = await getDb().execute(projectDeletionSql(id, actorId));
+    return rows.rows.length > 0;
   },
 };

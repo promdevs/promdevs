@@ -1,0 +1,1851 @@
+{
+  "id": "6369bf06-2797-4638-932f-13e1c0969cd5",
+  "prevId": "c4407901-1787-4ea1-881f-04f8d4c83256",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.clients": {
+      "name": "clients",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_type": {
+          "name": "client_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'organization'"
+        },
+        "public_name": {
+          "name": "public_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "industry": {
+          "name": "industry",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "website_url": {
+          "name": "website_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "logo": {
+          "name": "logo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_name": {
+          "name": "contact_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_email": {
+          "name": "contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contact_phone": {
+          "name": "contact_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "clients_status_idx": {
+          "name": "clients_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "clients_name_nonblank": {
+          "name": "clients_name_nonblank",
+          "value": "length(btrim(\"clients\".\"name\")) > 0"
+        },
+        "clients_type_valid": {
+          "name": "clients_type_valid",
+          "value": "\"clients\".\"client_type\" in ('individual', 'organization')"
+        },
+        "clients_status_valid": {
+          "name": "clients_status_valid",
+          "value": "\"clients\".\"status\" in ('active', 'archived')"
+        },
+        "clients_website_url_valid": {
+          "name": "clients_website_url_valid",
+          "value": "\"clients\".\"website_url\" is null or \"clients\".\"website_url\" ~* '^https?://[^/@[:space:]]+([/?#][^[:space:]]*)?$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.contributors": {
+      "name": "contributors",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contact_email": {
+          "name": "contact_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "contributors_name_nonblank": {
+          "name": "contributors_name_nonblank",
+          "value": "length(btrim(\"contributors\".\"name\")) > 0"
+        },
+        "contributors_status_valid": {
+          "name": "contributors_status_valid",
+          "value": "\"contributors\".\"status\" in ('active', 'archived')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.project_contributors": {
+      "name": "project_contributors",
+      "schema": "",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contributor_id": {
+          "name": "contributor_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "project_contributors_contributor_id_idx": {
+          "name": "project_contributors_contributor_id_idx",
+          "columns": [
+            {
+              "expression": "contributor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "project_contributors_project_id_projects_id_fk": {
+          "name": "project_contributors_project_id_projects_id_fk",
+          "tableFrom": "project_contributors",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "project_contributors_contributor_id_contributors_id_fk": {
+          "name": "project_contributors_contributor_id_contributors_id_fk",
+          "tableFrom": "project_contributors",
+          "tableTo": "contributors",
+          "columnsFrom": [
+            "contributor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "project_contributors_pk": {
+          "name": "project_contributors_pk",
+          "columns": [
+            "project_id",
+            "contributor_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.project_skills": {
+      "name": "project_skills",
+      "schema": "",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "skill_id": {
+          "name": "skill_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "project_skills_skill_id_idx": {
+          "name": "project_skills_skill_id_idx",
+          "columns": [
+            {
+              "expression": "skill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "project_skills_project_id_projects_id_fk": {
+          "name": "project_skills_project_id_projects_id_fk",
+          "tableFrom": "project_skills",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "project_skills_skill_id_skills_id_fk": {
+          "name": "project_skills_skill_id_skills_id_fk",
+          "tableFrom": "project_skills",
+          "tableTo": "skills",
+          "columnsFrom": [
+            "skill_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "project_skills_pk": {
+          "name": "project_skills_pk",
+          "columns": [
+            "project_id",
+            "skill_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "project_skills_sort_order_valid": {
+          "name": "project_skills_sort_order_valid",
+          "value": "\"project_skills\".\"sort_order\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.projects": {
+      "name": "projects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "tech_stack": {
+          "name": "tech_stack",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "cover_image": {
+          "name": "cover_image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "live_url": {
+          "name": "live_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "github_url": {
+          "name": "github_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "featured": {
+          "name": "featured",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'completed'"
+        },
+        "year": {
+          "name": "year",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "problem": {
+          "name": "problem",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "solution": {
+          "name": "solution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "results": {
+          "name": "results",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "engagement_type": {
+          "name": "engagement_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "product_types": {
+          "name": "product_types",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "platforms": {
+          "name": "platforms",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "industry": {
+          "name": "industry",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "show_client": {
+          "name": "show_client",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "role_summary": {
+          "name": "role_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "services": {
+          "name": "services",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "starting_point": {
+          "name": "starting_point",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "built_with": {
+          "name": "built_with",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "approach": {
+          "name": "approach",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cover_alt": {
+          "name": "cover_alt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gallery": {
+          "name": "gallery",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "app_store_url": {
+          "name": "app_store_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "play_store_url": {
+          "name": "play_store_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timeline": {
+          "name": "timeline",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publication_status": {
+          "name": "publication_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "seo_title": {
+          "name": "seo_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seo_description": {
+          "name": "seo_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "social_image": {
+          "name": "social_image",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "projects_client_id_idx": {
+          "name": "projects_client_id_idx",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "projects_public_listing_idx": {
+          "name": "projects_public_listing_idx",
+          "columns": [
+            {
+              "expression": "publication_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "featured",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "projects_client_id_clients_id_fk": {
+          "name": "projects_client_id_clients_id_fk",
+          "tableFrom": "projects",
+          "tableTo": "clients",
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "projects_slug_unique": {
+          "name": "projects_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        },
+        "projects_id_client_id_unique": {
+          "name": "projects_id_client_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "client_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "projects_title_nonblank": {
+          "name": "projects_title_nonblank",
+          "value": "length(btrim(\"projects\".\"title\")) > 0"
+        },
+        "projects_slug_valid": {
+          "name": "projects_slug_valid",
+          "value": "\"projects\".\"slug\" is null or \"projects\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        },
+        "projects_engagement_type_valid": {
+          "name": "projects_engagement_type_valid",
+          "value": "\"projects\".\"engagement_type\" in ('client_work', 'collaboration', 'studio_product')"
+        },
+        "projects_work_status_valid": {
+          "name": "projects_work_status_valid",
+          "value": "\"projects\".\"status\" in ('in_progress', 'completed', 'ongoing')"
+        },
+        "projects_publication_status_valid": {
+          "name": "projects_publication_status_valid",
+          "value": "\"projects\".\"publication_status\" in ('draft', 'published', 'archived')"
+        },
+        "projects_starting_point_valid": {
+          "name": "projects_starting_point_valid",
+          "value": "\"projects\".\"starting_point\" in ('idea', 'prototype', 'ai_generated_build', 'unfinished_product', 'established_product')"
+        },
+        "projects_product_types_valid": {
+          "name": "projects_product_types_valid",
+          "value": "\"projects\".\"product_types\" <@ ARRAY['website', 'web_app', 'mobile_app', 'ai_product']::text[] and array_position(\"projects\".\"product_types\", null) is null"
+        },
+        "projects_platforms_valid": {
+          "name": "projects_platforms_valid",
+          "value": "\"projects\".\"platforms\" <@ ARRAY['web', 'ios', 'android', 'macos', 'windows', 'linux']::text[] and array_position(\"projects\".\"platforms\", null) is null"
+        },
+        "projects_year_valid": {
+          "name": "projects_year_valid",
+          "value": "\"projects\".\"year\" is null or \"projects\".\"year\" between 2000 and 2100"
+        },
+        "projects_sort_order_valid": {
+          "name": "projects_sort_order_valid",
+          "value": "\"projects\".\"sort_order\" >= 0"
+        },
+        "projects_live_url_valid": {
+          "name": "projects_live_url_valid",
+          "value": "\"projects\".\"live_url\" is null or \"projects\".\"live_url\" ~* '^https?://[^/@[:space:]]+([/?#][^[:space:]]*)?$'"
+        },
+        "projects_github_url_valid": {
+          "name": "projects_github_url_valid",
+          "value": "\"projects\".\"github_url\" is null or \"projects\".\"github_url\" ~* '^https?://[^/@[:space:]]+([/?#][^[:space:]]*)?$'"
+        },
+        "projects_app_store_url_valid": {
+          "name": "projects_app_store_url_valid",
+          "value": "\"projects\".\"app_store_url\" is null or \"projects\".\"app_store_url\" ~* '^https://(apps|itunes)\\.apple\\.com/([a-z]{2}/)?app/([^/?#[:space:]]+/)?id[0-9]+([/?#][^[:space:]]*)?$'"
+        },
+        "projects_play_store_url_valid": {
+          "name": "projects_play_store_url_valid",
+          "value": "\"projects\".\"play_store_url\" is null or \"projects\".\"play_store_url\" ~* '^https://play\\.google\\.com/store/apps/details\\?([^#[:space:]]*&)?id=[^&#[:space:]]+(&[^#[:space:]]*)?(#[^[:space:]]*)?$'"
+        },
+        "projects_show_client_linked": {
+          "name": "projects_show_client_linked",
+          "value": "not \"projects\".\"show_client\" or \"projects\".\"client_id\" is not null"
+        },
+        "projects_gallery_valid": {
+          "name": "projects_gallery_valid",
+          "value": "case when jsonb_typeof(\"projects\".\"gallery\") = 'array' then\n    not jsonb_path_exists(\"projects\".\"gallery\", '$[*] ? (@.type() != \"object\" || !exists(@.type) || !exists(@.src) || (@.type != \"image\" && @.type != \"video\") || @.src.type() != \"string\" || @.src == \"\")')\n    else false end"
+        },
+        "projects_timeline_valid": {
+          "name": "projects_timeline_valid",
+          "value": "case\n    when \"projects\".\"timeline\" is null then true\n    when jsonb_typeof(\"projects\".\"timeline\") != 'object' then false\n    when (\"projects\".\"timeline\" - ARRAY['start_date', 'end_date', 'milestones']::text[]) != '{}'::jsonb then false\n    when \"projects\".\"timeline\"->'start_date' is not null and \"projects\".\"timeline\"->'start_date' != 'null'::jsonb\n      and (jsonb_typeof(\"projects\".\"timeline\"->'start_date') != 'string' or (\"projects\".\"timeline\"->>'start_date') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') then false\n    when \"projects\".\"timeline\"->'end_date' is not null and \"projects\".\"timeline\"->'end_date' != 'null'::jsonb\n      and (jsonb_typeof(\"projects\".\"timeline\"->'end_date') != 'string' or (\"projects\".\"timeline\"->>'end_date') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') then false\n    when \"projects\".\"timeline\"->'milestones' is not null and jsonb_typeof(\"projects\".\"timeline\"->'milestones') != 'array' then false\n    else\n      ((\"projects\".\"timeline\"->>'start_date') is null or to_char((\"projects\".\"timeline\"->>'start_date')::date, 'YYYY-MM-DD') = \"projects\".\"timeline\"->>'start_date')\n      and ((\"projects\".\"timeline\"->>'end_date') is null or to_char((\"projects\".\"timeline\"->>'end_date')::date, 'YYYY-MM-DD') = \"projects\".\"timeline\"->>'end_date')\n      and ((\"projects\".\"timeline\"->>'start_date')::date is null or (\"projects\".\"timeline\"->>'end_date')::date is null\n        or (\"projects\".\"timeline\"->>'end_date')::date >= (\"projects\".\"timeline\"->>'start_date')::date)\n      and not jsonb_path_exists(\"projects\".\"timeline\", '$.milestones[*] ? (@.type() != \"object\" || !exists(@.label) || @.label.type() != \"string\" || @.label == \"\" || (exists(@.date) && @.date != null && (@.date.type() != \"string\" || !(@.date like_regex \"^[0-9]{4}-[0-9]{2}-[0-9]{2}$\"))))')\n  end"
+        },
+        "projects_published_content_ready": {
+          "name": "projects_published_content_ready",
+          "value": "\"projects\".\"publication_status\" != 'published' or (\n    \"projects\".\"slug\" is not null and length(btrim(\"projects\".\"description\")) > 0\n    and cardinality(\"projects\".\"product_types\") > 0\n    and \"projects\".\"cover_image\" is not null and length(btrim(\"projects\".\"cover_image\")) > 0\n    and \"projects\".\"cover_alt\" is not null and length(btrim(\"projects\".\"cover_alt\")) > 0\n    and \"projects\".\"published_at\" is not null\n  )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.reviews": {
+      "name": "reviews",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "client_id": {
+          "name": "client_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "rating": {
+          "name": "rating",
+          "type": "numeric(3, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_name": {
+          "name": "author_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_role": {
+          "name": "author_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_company": {
+          "name": "author_company",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "author_avatar": {
+          "name": "author_avatar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "show_identity": {
+          "name": "show_identity",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'direct'"
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publication_status": {
+          "name": "publication_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "featured": {
+          "name": "featured",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "internal_notes": {
+          "name": "internal_notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "reviews_source_external_id_unique": {
+          "name": "reviews_source_external_id_unique",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"reviews\".\"external_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reviews_client_id_idx": {
+          "name": "reviews_client_id_idx",
+          "columns": [
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reviews_project_client_idx": {
+          "name": "reviews_project_client_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "client_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "reviews_public_listing_idx": {
+          "name": "reviews_public_listing_idx",
+          "columns": [
+            {
+              "expression": "publication_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "featured",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reviews_client_id_clients_id_fk": {
+          "name": "reviews_client_id_clients_id_fk",
+          "tableFrom": "reviews",
+          "tableTo": "clients",
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "reviews_project_id_projects_id_fk": {
+          "name": "reviews_project_id_projects_id_fk",
+          "tableFrom": "reviews",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "reviews_project_client_fk": {
+          "name": "reviews_project_client_fk",
+          "tableFrom": "reviews",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id",
+            "client_id"
+          ],
+          "columnsTo": [
+            "id",
+            "client_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "reviews_rating_valid": {
+          "name": "reviews_rating_valid",
+          "value": "\"reviews\".\"rating\" is null or \"reviews\".\"rating\" between 1 and 5"
+        },
+        "reviews_source_valid": {
+          "name": "reviews_source_valid",
+          "value": "\"reviews\".\"source\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        },
+        "reviews_source_url_valid": {
+          "name": "reviews_source_url_valid",
+          "value": "\"reviews\".\"source_url\" is null or \"reviews\".\"source_url\" ~* '^https?://[^/@[:space:]]+([/?#][^[:space:]]*)?$'"
+        },
+        "reviews_external_id_nonblank": {
+          "name": "reviews_external_id_nonblank",
+          "value": "\"reviews\".\"external_id\" is null or length(btrim(\"reviews\".\"external_id\")) > 0"
+        },
+        "reviews_named_identity_ready": {
+          "name": "reviews_named_identity_ready",
+          "value": "not \"reviews\".\"show_identity\" or (\"reviews\".\"author_name\" is not null and length(btrim(\"reviews\".\"author_name\")) > 0)"
+        },
+        "reviews_publication_status_valid": {
+          "name": "reviews_publication_status_valid",
+          "value": "\"reviews\".\"publication_status\" in ('draft', 'published', 'archived')"
+        },
+        "reviews_sort_order_valid": {
+          "name": "reviews_sort_order_valid",
+          "value": "\"reviews\".\"sort_order\" >= 0"
+        },
+        "reviews_published_content_ready": {
+          "name": "reviews_published_content_ready",
+          "value": "\"reviews\".\"publication_status\" != 'published' or (\n    \"reviews\".\"client_id\" is not null and length(btrim(\"reviews\".\"body\")) > 0\n    and \"reviews\".\"published_at\" is not null\n  )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.skills": {
+      "name": "skills",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "icon_url": {
+          "name": "icon_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "skills_category_idx": {
+          "name": "skills_category_idx",
+          "columns": [
+            {
+              "expression": "category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "skills_slug_unique": {
+          "name": "skills_slug_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "slug"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "skills_name_nonblank": {
+          "name": "skills_name_nonblank",
+          "value": "length(btrim(\"skills\".\"name\")) > 0"
+        },
+        "skills_slug_valid": {
+          "name": "skills_slug_valid",
+          "value": "\"skills\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        },
+        "skills_category_nonblank": {
+          "name": "skills_category_nonblank",
+          "value": "length(btrim(\"skills\".\"category\")) > 0"
+        },
+        "skills_icon_url_valid": {
+          "name": "skills_icon_url_valid",
+          "value": "\"skills\".\"icon_url\" is null or \"skills\".\"icon_url\" ~* '^https?://[^/@[:space:]]+([/?#][^[:space:]]*)?$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.admin_audit_logs": {
+      "name": "admin_audit_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "admin_audit_logs_actor_created_idx": {
+          "name": "admin_audit_logs_actor_created_idx",
+          "columns": [
+            {
+              "expression": "actor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_audit_logs_target_created_idx": {
+          "name": "admin_audit_logs_target_created_idx",
+          "columns": [
+            {
+              "expression": "target_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_audit_logs_created_at_idx": {
+          "name": "admin_audit_logs_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_audit_logs_actor_id_admin_users_id_fk": {
+          "name": "admin_audit_logs_actor_id_admin_users_id_fk",
+          "tableFrom": "admin_audit_logs",
+          "tableTo": "admin_users",
+          "columnsFrom": [
+            "actor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "admin_audit_logs_action_valid": {
+          "name": "admin_audit_logs_action_valid",
+          "value": "length(\"admin_audit_logs\".\"action\") <= 80 and \"admin_audit_logs\".\"action\" ~ '^[a-z][a-z0-9_]*([.][a-z][a-z0-9_]*)+$'"
+        },
+        "admin_audit_logs_target_pair_valid": {
+          "name": "admin_audit_logs_target_pair_valid",
+          "value": "(\"admin_audit_logs\".\"target_type\" is null) = (\"admin_audit_logs\".\"target_id\" is null)"
+        },
+        "admin_audit_logs_target_type_valid": {
+          "name": "admin_audit_logs_target_type_valid",
+          "value": "\"admin_audit_logs\".\"target_type\" is null or (length(\"admin_audit_logs\".\"target_type\") <= 64 and \"admin_audit_logs\".\"target_type\" ~ '^[a-z][a-z0-9_]*$')"
+        },
+        "admin_audit_logs_target_id_valid": {
+          "name": "admin_audit_logs_target_id_valid",
+          "value": "\"admin_audit_logs\".\"target_id\" is null or length(btrim(\"admin_audit_logs\".\"target_id\")) between 1 and 128"
+        },
+        "admin_audit_logs_metadata_valid": {
+          "name": "admin_audit_logs_metadata_valid",
+          "value": "jsonb_typeof(\"admin_audit_logs\".\"metadata\") = 'object' and octet_length(\"admin_audit_logs\".\"metadata\"::text) <= 16384"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.admin_invitations": {
+      "name": "admin_invitations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invited_by": {
+          "name": "invited_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "admin_invitations_token_hash_unique": {
+          "name": "admin_invitations_token_hash_unique",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_invitations_pending_user_unique": {
+          "name": "admin_invitations_pending_user_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"admin_invitations\".\"accepted_at\" is null and \"admin_invitations\".\"revoked_at\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_invitations_invited_by_idx": {
+          "name": "admin_invitations_invited_by_idx",
+          "columns": [
+            {
+              "expression": "invited_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_invitations_expires_at_idx": {
+          "name": "admin_invitations_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_invitations_user_id_admin_users_id_fk": {
+          "name": "admin_invitations_user_id_admin_users_id_fk",
+          "tableFrom": "admin_invitations",
+          "tableTo": "admin_users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "admin_invitations_invited_by_admin_users_id_fk": {
+          "name": "admin_invitations_invited_by_admin_users_id_fk",
+          "tableFrom": "admin_invitations",
+          "tableTo": "admin_users",
+          "columnsFrom": [
+            "invited_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "admin_invitations_token_hash_valid": {
+          "name": "admin_invitations_token_hash_valid",
+          "value": "\"admin_invitations\".\"token_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "admin_invitations_not_self": {
+          "name": "admin_invitations_not_self",
+          "value": "\"admin_invitations\".\"user_id\" != \"admin_invitations\".\"invited_by\""
+        },
+        "admin_invitations_expiry_valid": {
+          "name": "admin_invitations_expiry_valid",
+          "value": "\"admin_invitations\".\"expires_at\" > \"admin_invitations\".\"created_at\""
+        },
+        "admin_invitations_terminal_state_valid": {
+          "name": "admin_invitations_terminal_state_valid",
+          "value": "\"admin_invitations\".\"accepted_at\" is null or \"admin_invitations\".\"revoked_at\" is null"
+        },
+        "admin_invitations_acceptance_valid": {
+          "name": "admin_invitations_acceptance_valid",
+          "value": "\"admin_invitations\".\"accepted_at\" is null or (\"admin_invitations\".\"accepted_at\" >= \"admin_invitations\".\"created_at\" and \"admin_invitations\".\"accepted_at\" < \"admin_invitations\".\"expires_at\")"
+        },
+        "admin_invitations_revocation_valid": {
+          "name": "admin_invitations_revocation_valid",
+          "value": "\"admin_invitations\".\"revoked_at\" is null or \"admin_invitations\".\"revoked_at\" >= \"admin_invitations\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.admin_sessions": {
+      "name": "admin_sessions",
+      "schema": "",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_version": {
+          "name": "auth_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "admin_sessions_user_id_idx": {
+          "name": "admin_sessions_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_sessions_expires_at_idx": {
+          "name": "admin_sessions_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_sessions_user_id_admin_users_id_fk": {
+          "name": "admin_sessions_user_id_admin_users_id_fk",
+          "tableFrom": "admin_sessions",
+          "tableTo": "admin_users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "admin_sessions_token_hash_valid": {
+          "name": "admin_sessions_token_hash_valid",
+          "value": "\"admin_sessions\".\"token_hash\" ~ '^[a-f0-9]{64}$'"
+        },
+        "admin_sessions_auth_version_valid": {
+          "name": "admin_sessions_auth_version_valid",
+          "value": "\"admin_sessions\".\"auth_version\" > 0"
+        },
+        "admin_sessions_expiry_valid": {
+          "name": "admin_sessions_expiry_valid",
+          "value": "\"admin_sessions\".\"expires_at\" > \"admin_sessions\".\"created_at\""
+        },
+        "admin_sessions_last_seen_valid": {
+          "name": "admin_sessions_last_seen_valid",
+          "value": "\"admin_sessions\".\"last_seen_at\" is null or \"admin_sessions\".\"last_seen_at\" >= \"admin_sessions\".\"created_at\""
+        },
+        "admin_sessions_revocation_valid": {
+          "name": "admin_sessions_revocation_valid",
+          "value": "\"admin_sessions\".\"revoked_at\" is null or \"admin_sessions\".\"revoked_at\" >= \"admin_sessions\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.admin_users": {
+      "name": "admin_users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'editor'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'invited'"
+        },
+        "auth_version": {
+          "name": "auth_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "email_verified_at": {
+          "name": "email_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "password_changed_at": {
+          "name": "password_changed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_login_at": {
+          "name": "last_login_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "admin_users_email_unique": {
+          "name": "admin_users_email_unique",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_users_status_role_idx": {
+          "name": "admin_users_status_role_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "admin_users_email_valid": {
+          "name": "admin_users_email_valid",
+          "value": "\"admin_users\".\"email\" = lower(btrim(\"admin_users\".\"email\")) and length(\"admin_users\".\"email\") between 3 and 254 and \"admin_users\".\"email\" ~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'"
+        },
+        "admin_users_name_valid": {
+          "name": "admin_users_name_valid",
+          "value": "length(btrim(\"admin_users\".\"name\")) between 1 and 120"
+        },
+        "admin_users_role_valid": {
+          "name": "admin_users_role_valid",
+          "value": "\"admin_users\".\"role\" in ('owner', 'admin', 'editor')"
+        },
+        "admin_users_status_valid": {
+          "name": "admin_users_status_valid",
+          "value": "\"admin_users\".\"status\" in ('invited', 'active', 'disabled')"
+        },
+        "admin_users_auth_version_valid": {
+          "name": "admin_users_auth_version_valid",
+          "value": "\"admin_users\".\"auth_version\" > 0"
+        },
+        "admin_users_password_hash_valid": {
+          "name": "admin_users_password_hash_valid",
+          "value": "\"admin_users\".\"password_hash\" is null or \"admin_users\".\"password_hash\" ~ '^scrypt[$][a-f0-9]{32}[$][a-f0-9]{128}$'"
+        },
+        "admin_users_active_credentials_ready": {
+          "name": "admin_users_active_credentials_ready",
+          "value": "\"admin_users\".\"status\" != 'active' or (\"admin_users\".\"password_hash\" is not null and \"admin_users\".\"password_changed_at\" is not null)"
+        },
+        "admin_users_invited_credentials_empty": {
+          "name": "admin_users_invited_credentials_empty",
+          "value": "\"admin_users\".\"status\" != 'invited' or (\"admin_users\".\"password_hash\" is null and \"admin_users\".\"password_changed_at\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

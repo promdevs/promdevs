@@ -10,22 +10,22 @@ import {
   projectInputSchema,
   type ContactInput,
 } from "@promdevs/contracts";
+import { sessionCookie, sessionToken } from "./auth.js";
+import { Authentication } from "./access-control/authentication.js";
+import type { AuthStore } from "./access-control/auth-store.js";
 import {
-  Sessions,
-  isPasswordHash,
-  sessionToken,
-  verifyPassword,
-} from "./auth.js";
+  userHasPermission,
+  type AdminPermission,
+} from "./access-control/roles.js";
 import { HttpError } from "./errors.js";
 import { RateLimiter } from "./rate-limit.js";
 import type { ProjectStore } from "./projects.js";
 
 type Options = {
   store: ProjectStore;
+  authStore: AuthStore;
   sendEmail: (input: ContactInput) => Promise<unknown>;
   adminOrigin: string;
-  adminEmail: string;
-  passwordHash: string;
   secureCookies: boolean;
   trustProxy: boolean;
 };
@@ -84,10 +84,8 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 export function createApiServer(options: Options) {
-  const sessions = new Sessions();
+  const authentication = new Authentication(options.authStore);
   const limiter = new RateLimiter();
-  const authConfigured =
-    !!options.adminEmail && isPasswordHash(options.passwordHash);
   const origin = new URL(options.adminOrigin).origin;
 
   const server = createServer((request, response) => {
@@ -119,11 +117,13 @@ export function createApiServer(options: Options) {
       if (request.headers.origin !== origin)
         throw new HttpError(403, "Request origin is not allowed.");
     };
-    const requireSession = () => {
-      if (!authConfigured)
-        throw new HttpError(503, "Admin access is not configured.");
-      const session = sessions.get(sessionToken(request.headers.cookie));
+    const requireSession = async (permission?: AdminPermission) => {
+      const session = await authentication.session(
+        sessionToken(request.headers.cookie),
+      );
       if (!session) throw new HttpError(401, "Please sign in.");
+      if (permission && !userHasPermission(session, permission))
+        throw new HttpError(403, "You do not have permission for this action.");
       return session;
     };
 
@@ -167,47 +167,33 @@ export function createApiServer(options: Options) {
       }
       if (method === "POST" && pathname === "/api/admin/login") {
         requireOrigin();
-        if (!authConfigured)
-          throw new HttpError(
-            503,
-            "Admin access is not configured. Set ADMIN_EMAIL and ADMIN_PASSWORD_HASH on the API.",
-          );
         limited(`login:${ip}`, 5);
         limited("login:global", 50);
         const parsed = loginSchema.safeParse(await readJson(request));
         if (!parsed.success)
           throw new HttpError(400, "Enter a valid email and password.");
-        // Derive the hash even for a wrong email to avoid an account-existence timing signal.
-        const correctPassword = await verifyPassword(
+        const { identity, token } = await authentication.login(
+          parsed.data.email,
           parsed.data.password,
-          options.passwordHash,
+          sessionToken(request.headers.cookie),
         );
-        if (
-          parsed.data.email.toLowerCase() !==
-            options.adminEmail.toLowerCase() ||
-          !correctPassword
-        )
-          throw new HttpError(401, "Invalid email or password.");
-        const previous = sessionToken(request.headers.cookie);
-        if (previous) sessions.remove(previous);
-        const token = sessions.create(options.adminEmail);
         response.setHeader(
           "Set-Cookie",
-          sessions.cookie(token, options.secureCookies),
+          sessionCookie(token, options.secureCookies),
         );
-        json(response, 200, { email: options.adminEmail });
+        json(response, 200, { email: identity.email });
         return;
       }
       if (method === "GET" && pathname === "/api/admin/session") {
-        json(response, 200, { email: requireSession().email });
+        json(response, 200, { email: (await requireSession()).email });
         return;
       }
       if (method === "POST" && pathname === "/api/admin/logout") {
         requireOrigin();
-        sessions.remove(sessionToken(request.headers.cookie));
+        await authentication.logout(sessionToken(request.headers.cookie));
         response.setHeader(
           "Set-Cookie",
-          sessions.cookie("", options.secureCookies, true),
+          sessionCookie("", options.secureCookies, true),
         );
         json(response, 200, { message: "Signed out." });
         return;
@@ -216,7 +202,7 @@ export function createApiServer(options: Options) {
         pathname === "/api/admin/projects" ||
         /^\/api\/admin\/projects\/[1-9]\d*$/.test(pathname)
       ) {
-        requireSession();
+        const actor = await requireSession("content.read");
         if (method === "GET" && pathname === "/api/admin/projects") {
           json(response, 200, { projects: await options.store.list("admin") });
           return;
@@ -227,6 +213,16 @@ export function createApiServer(options: Options) {
           (method === "POST" && pathname === "/api/admin/projects") ||
           (method === "PUT" && pathname !== "/api/admin/projects")
         ) {
+          if (
+            !userHasPermission(
+              actor,
+              method === "POST" ? "content.create" : "content.edit_draft",
+            )
+          )
+            throw new HttpError(
+              403,
+              "You do not have permission for this action.",
+            );
           const parsed = projectInputSchema.safeParse(await readJson(request));
           if (!parsed.success)
             throw new HttpError(
@@ -239,16 +235,26 @@ export function createApiServer(options: Options) {
           const project =
             method === "POST"
               ? await options.store.create(parsed.data)
-              : await options.store.update(id, parsed.data);
+              : await options.store.update(id, parsed.data, {
+                  draftsOnly: !userHasPermission(
+                    actor,
+                    "content.edit_published",
+                  ),
+                });
           if (!project) throw new HttpError(404, "Project not found.");
           json(response, method === "POST" ? 201 : 200, { project });
           return;
         }
         if (method === "DELETE" && pathname !== "/api/admin/projects") {
+          if (!userHasPermission(actor, "content.delete"))
+            throw new HttpError(
+              403,
+              "You do not have permission for this action.",
+            );
           const id = Number(pathname.split("/").at(-1));
           if (!Number.isSafeInteger(id))
             throw new HttpError(400, "Invalid project ID.");
-          if (!(await options.store.remove(id)))
+          if (!(await options.store.remove(id, actor.id)))
             throw new HttpError(404, "Project not found.");
           json(response, 200, { message: "Project deleted." });
           return;
