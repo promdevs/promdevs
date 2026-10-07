@@ -218,7 +218,7 @@ export function createApiServer(options: Options) {
       ) {
         requireSession();
         if (method === "GET" && pathname === "/api/admin/projects") {
-          json(response, 200, { projects: await options.store.list() });
+          json(response, 200, { projects: await options.store.list("admin") });
           return;
         }
         requireOrigin();
