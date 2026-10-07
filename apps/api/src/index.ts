@@ -3,11 +3,17 @@ import { createApiServer } from "./server.js";
 import { projectStore } from "./projects.js";
 import { sendContactEmail } from "./email/resend.js";
 import { databaseAuthStore } from "./access-control/auth-store.js";
+import { databaseAccountsStore } from "./access-control/accounts-store.js";
+import { databaseInvitationsStore } from "./access-control/invitations-store.js";
+import { invitationMailer } from "./email/invitations.js";
 
 const server = createApiServer({
   ...config,
   store: projectStore,
   authStore: databaseAuthStore,
+  accountsStore: databaseAccountsStore,
+  invitationsStore: databaseInvitationsStore,
+  invitationMailer,
   sendEmail: sendContactEmail,
 });
 server.listen(config.port, config.host, () => {

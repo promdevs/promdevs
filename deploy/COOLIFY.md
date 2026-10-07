@@ -126,17 +126,18 @@ See [environment variables](https://coolify.io/docs/applications/configuration/e
 
 ### API
 
-| Variable             | Value                                                   |
-| -------------------- | ------------------------------------------------------- |
-| `NODE_ENV`           | `production`                                            |
-| `HOST`               | `0.0.0.0` (do not copy the local `127.0.0.1` setting)   |
-| `PORT`               | `4000`                                                  |
-| `DATABASE_URL`       | Your existing database connection string                |
-| `ADMIN_ORIGIN`       | `https://admin.promdevs.com` exactly, no trailing slash |
-| `RESEND_API_KEY`     | Your private Resend API key                             |
-| `CONTACT_TO_EMAIL`   | Your receiving inbox                                    |
-| `CONTACT_FROM_EMAIL` | A sender at your verified Resend domain                 |
-| `TRUST_PROXY`        | `false` initially; see the security note below          |
+| Variable             | Value                                                               |
+| -------------------- | ------------------------------------------------------------------- |
+| `NODE_ENV`           | `production`                                                        |
+| `HOST`               | `0.0.0.0` (do not copy the local `127.0.0.1` setting)               |
+| `PORT`               | `4000`                                                              |
+| `DATABASE_URL`       | Your existing database connection string                            |
+| `ADMIN_ORIGIN`       | `https://admin.promdevs.com` exactly, no trailing slash             |
+| `ADMIN_FROM_EMAIL`   | Optional verified invitation sender; otherwise `CONTACT_FROM_EMAIL` |
+| `RESEND_API_KEY`     | Your private Resend API key                                         |
+| `CONTACT_TO_EMAIL`   | Your receiving inbox                                                |
+| `CONTACT_FROM_EMAIL` | A sender at your verified Resend domain                             |
+| `TRUST_PROXY`        | `false` initially; see the security note below                      |
 
 Admin credentials now live in PostgreSQL, not Coolify variables. Apply the reviewed
 admin migration and seed the first owner explicitly before deploying the cutover.
@@ -145,6 +146,17 @@ not seed again. Sign in with the seeded owner credentials after deploying the AP
 old in-memory sessions require a fresh login. Then remove `ADMIN_EMAIL` and
 `ADMIN_PASSWORD_HASH` from Coolify. They are ignored by this version and no legacy
 fallback remains. No admin rebuild is required for this auth change.
+
+For account management, deploy the latest API **before** deploying the latest
+admin. The admin now uses `/api/admin/me` and the owner-only Users endpoints.
+The existing admin schema is sufficient; there is no new migration for this step.
+Invitation emails require `RESEND_API_KEY` plus `ADMIN_FROM_EMAIL` or
+`CONTACT_FROM_EMAIL` at a verified domain. The links point to `ADMIN_ORIGIN`, which
+must use HTTPS in production. It must match the browser origin exactly.
+Unlike contact messages, missing email configuration does not log an invitation
+or claim that it was sent. Failed delivery leaves an invited account; resend from
+Users after correcting provider settings. Never paste a live invite link into logs
+or a public issue. No invitation emails or live account changes are made by tests.
 
 Resend's `onboarding@resend.dev` default is for
 initial testing; configure your verified domain for normal production delivery.
@@ -200,7 +212,8 @@ server-to-server API requests with an interactive browser challenge.
    access. A public empty project list is valid; 503 is not database readiness.
 2. Deploy admin. Open `https://admin.promdevs.com`, sign in, and verify the project
    list. Confirm sign-out revokes access. Do not create test records in the live
-   portfolio unless you intentionally want them public.
+   portfolio unless you intentionally want them stored. The new editor saves
+   drafts only; uploaded media URLs are public even when records are private.
 3. Deploy web. Check the homepage, `/projects`, a real project detail URL if one
    exists, `/robots.txt`, and `/sitemap.xml`. Submit a contact message only if you
    intend to send that email. Admin content changes appear on the next public
@@ -251,6 +264,15 @@ presented certificate chain from inside the container; never download arbitrary
 certificates into the trust store to work around an unverified issuer.
 
 ## Security and operational limitations
+
+For the API/admin project editor rollout, deploy **API first, then admin**. No new
+migration is needed when the existing portfolio/admin schema is applied. Configure
+R2 and `R2_PUBLIC_BASE_URL` on the API only. Its Docker image now installs ffmpeg;
+verify `ffprobe -version` in the container. The updated admin Nginx template admits
+50 MiB raw uploads only at the project-media route, with longer upload timeouts.
+Keep the same ports and HTTPS verification. Normal JSON routes remain bounded.
+See [project-management setup](../docs/project-management.md) for codec constraints,
+public media handling, draft-only permissions, and retention limitations.
 
 - Keep `TRUST_PROXY=false` until every ingress path sanitizes `X-Forwarded-For`
   and direct origin access is blocked. With it false, shared proxy IPs share a

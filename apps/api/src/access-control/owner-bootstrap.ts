@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { loginSchema } from "@promdevs/contracts";
+import { ADMIN_PASSWORD_MIN_LENGTH, loginSchema } from "@promdevs/contracts";
 import { isPasswordHash } from "../auth.js";
 
 export class OwnerBootstrapError extends Error {}
@@ -31,9 +31,13 @@ export function validateOwnerPassword(
   password: string,
   confirmation: string,
 ): void {
-  if (password.length < 16 || password.length > 1024 || !password.trim()) {
+  if (
+    password.length < ADMIN_PASSWORD_MIN_LENGTH ||
+    password.length > 1024 ||
+    !password.trim()
+  ) {
     throw new OwnerBootstrapError(
-      "Use a password between 16 and 1024 characters, not just whitespace.",
+      `Use a password between ${ADMIN_PASSWORD_MIN_LENGTH} and 1024 characters, not just whitespace.`,
     );
   }
   if (password !== confirmation)

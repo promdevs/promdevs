@@ -28,10 +28,12 @@ test("owner details normalize email and reject invalid identifiers and terminal 
 test("owner password requires length, nonblank content, and exact confirmation", () => {
   const password = "a unique test-only owner passphrase";
   assert.equal(validateOwnerPassword(password, password), undefined);
+  assert.equal(validateOwnerPassword("T3st!pwd9", "T3st!pwd9"), undefined);
   for (const [value, confirmation] of [
     ["short", "short"],
+    ["T3st!pw8", "T3st!pw8"],
     ["x".repeat(1025), "x".repeat(1025)],
-    [" ".repeat(16), " ".repeat(16)],
+    [" ".repeat(9), " ".repeat(9)],
     [password, password + " "],
   ]) {
     assert.throws(

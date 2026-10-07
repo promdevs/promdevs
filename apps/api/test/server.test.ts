@@ -8,7 +8,7 @@ import { projectInputSchema, contactSchema } from "@promdevs/contracts";
 import { MemoryProjects, MemoryAuth } from "./fixtures.js";
 import { databaseAuthStore } from "../src/access-control/auth-store.js";
 
-const origin = "http://admin.test";
+const origin = "https://admin.test";
 const email = "admin@example.test";
 const password = "a long test-only passphrase";
 const store = new MemoryProjects();

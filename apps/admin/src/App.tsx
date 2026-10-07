@@ -1,22 +1,22 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import {
   ArrowUpRight,
   BriefcaseBusiness,
   LogOut,
-  Plus,
-  Pencil,
-  Trash2,
-  Search,
-  RotateCw,
+  UsersRound,
+  ShieldCheck,
 } from "lucide-react";
 import {
-  projectsResponseSchema,
   type AdminSession,
-  type Project,
+  adminIdentitySchema,
+  type AdminIdentity,
 } from "@promdevs/contracts";
 import { Button, Wordmark } from "@promdevs/ui";
 import { api, ApiError } from "./api";
-import { ProjectEditor } from "./ProjectEditor";
+import { ProjectWorkspace } from "./ProjectWorkspace";
+import { Users } from "./Users";
+import { Security } from "./Security";
+import { AcceptInvitation } from "./AcceptInvitation";
 
 const message = (reason: unknown) =>
   reason instanceof Error ? reason.message : "Something went wrong.";
@@ -35,7 +35,7 @@ function Login({
   onLogin,
   initialError,
 }: {
-  onLogin: (session: AdminSession) => void;
+  onLogin: (session: AdminSession) => Promise<void>;
   initialError: string;
 }) {
   const [email, setEmail] = useState("");
@@ -47,7 +47,7 @@ function Login({
     setBusy(true);
     setError("");
     try {
-      onLogin(
+      await onLogin(
         await api<AdminSession>("/login", {
           method: "POST",
           body: JSON.stringify({ email, password }),
@@ -83,7 +83,7 @@ function Login({
         <form className="login-form" onSubmit={submit} aria-busy={busy}>
           <p className="eyebrow">Private workspace</p>
           <h2>Welcome back.</h2>
-          <p className="muted">Sign in to manage your portfolio.</p>
+          <p className="muted">Sign in to your studio workspace.</p>
           <fieldset disabled={busy}>
             <label>
               Email address
@@ -116,7 +116,8 @@ function Login({
             {error}
           </p>
           <p className="login-footnote">
-            Access is restricted to your configured studio administrator.
+            Access is by invitation only. Your role determines what you can
+            manage.
           </p>
         </form>
       </div>
@@ -129,99 +130,81 @@ function Dashboard({
   session,
   onLogout,
 }: {
-  session: AdminSession;
-  onLogout: () => void;
+  session: AdminIdentity;
+  onLogout: (notice?: string) => void;
 }) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [query, setQuery] = useState("");
-  const [editor, setEditor] = useState<{ project: Project | null } | null>(
-    null,
+  const [view, setView] = useState<"projects" | "users" | "security">(
+    "projects",
   );
-  const [pending, setPending] = useState<number | "logout" | null>(null);
-  const [reload, setReload] = useState(0);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    void api<{ projects: Project[] }>("/projects", {
-      signal: controller.signal,
-    })
-      .then((body) => {
-        if (!controller.signal.aborted) {
-          setProjects(projectsResponseSchema.parse(body).projects);
-          setError("");
-        }
-      })
-      .catch((reason) => {
-        if (controller.signal.aborted) return;
-        if (reason instanceof ApiError && reason.status === 401) onLogout();
-        else setError(message(reason));
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, [reload, onLogout]);
-
-  async function remove(project: Project) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [dirty, setDirty] = useState(false);
+  const changeView = (next: typeof view) => {
+    if (next === view) return;
     if (
-      !window.confirm(
-        `Delete “${project.title}”? This removes its public project page and cannot be undone.`,
-      )
+      dirty &&
+      !window.confirm("Leave this project and discard unsaved changes?")
     )
       return;
-    setPending(project.id);
-    setError("");
-    setNotice("");
-    try {
-      await api(`/projects/${project.id}`, { method: "DELETE" });
-      setProjects((previous) =>
-        previous.filter((item) => item.id !== project.id),
-      );
-      setNotice("Project deleted.");
-    } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 401) onLogout();
-      else setError(message(reason));
-    } finally {
-      setPending(null);
-    }
-  }
+    setDirty(false);
+    setView(next);
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search,
+    );
+  };
   async function logout() {
-    setPending("logout");
+    if (dirty && !window.confirm("Sign out and discard unsaved changes?"))
+      return;
+    setBusy(true);
     try {
       await api("/logout", { method: "POST" });
       onLogout();
     } catch (reason) {
       setError(message(reason));
     } finally {
-      setPending(null);
+      setBusy(false);
     }
   }
-  const filtered = projects.filter((project) =>
-    `${project.title} ${project.category} ${project.techStack.join(" ")}`
-      .toLowerCase()
-      .includes(query.toLowerCase().trim()),
-  );
-
   return (
     <div className="workspace">
       <a className="skip-link" href="#workspace-main">
-        Skip to projects
+        Skip to workspace
       </a>
       <aside className="sidebar">
         <Brand />
         <p className="eyebrow sidebar-label">Workspace</p>
         <nav aria-label="Admin navigation">
-          <a
-            href="#workspace-main"
-            className="sidebar-link active"
-            aria-current="page"
+          <button
+            type="button"
+            onClick={() => changeView("projects")}
+            className={`sidebar-link ${view === "projects" ? "active" : ""}`}
+            aria-current={view === "projects" ? "page" : undefined}
           >
             <BriefcaseBusiness size={18} aria-hidden />
             Projects
-          </a>
+          </button>
+          {session.role === "owner" && (
+            <button
+              type="button"
+              onClick={() => changeView("users")}
+              className={`sidebar-link ${view === "users" ? "active" : ""}`}
+              aria-current={view === "users" ? "page" : undefined}
+            >
+              <UsersRound size={18} aria-hidden />
+              Users
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => changeView("security")}
+            className={`sidebar-link ${view === "security" ? "active" : ""}`}
+            aria-current={view === "security" ? "page" : undefined}
+          >
+            <ShieldCheck size={18} aria-hidden />
+            Security
+          </button>
           <a
             className="sidebar-link"
             href="https://www.promdevs.com"
@@ -237,219 +220,95 @@ function Dashboard({
             {session.email.slice(0, 1).toUpperCase()}
           </span>
           <div>
-            <strong>Studio administrator</strong>
+            <strong className="role-label">{session.role}</strong>
             <span>{session.email}</span>
           </div>
         </div>
         <button
           className="sidebar-link signout"
           onClick={logout}
-          disabled={pending !== null}
+          disabled={busy}
         >
           <LogOut size={17} aria-hidden />
-          {pending === "logout" ? "Signing out…" : "Sign out"}
+          {busy ? "Signing out…" : "Sign out"}
         </button>
       </aside>
       <main id="workspace-main" className="workspace-main">
         <header className="workspace-top">
-          <span className="eyebrow">PromDevs / Portfolio</span>
+          <span className="eyebrow">
+            PromDevs /{" "}
+            {view === "users"
+              ? "People"
+              : view === "security"
+                ? "Security"
+                : "Portfolio"}
+          </span>
           <span className="private-label">Private workspace</span>
         </header>
-        <section aria-labelledby="projects-title">
-          <div className="page-heading">
-            <div>
-              <p className="eyebrow">The work, in focus</p>
-              <h1 id="projects-title">Your portfolio.</h1>
-              <p className="muted">
-                Real projects. Clear stories. Ready for the world.
-              </p>
-            </div>
-            <Button
-              disabled={pending !== null || loading}
-              onClick={() => {
-                setNotice("");
-                setEditor({ project: null });
-              }}
-            >
-              <Plus size={17} aria-hidden />
-              Add project
-            </Button>
-          </div>
-          <div className="list-toolbar">
-            <label className="search">
-              <Search size={18} aria-hidden />
-              <span className="sr-only">Search projects</span>
-              <input
-                type="search"
-                placeholder="Find a project…"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </label>
-            <span className="project-count">
-              {loading
-                ? "Loading portfolio…"
-                : `${projects.length} ${projects.length === 1 ? "project" : "projects"}`}
-            </span>
-            <button
-              className="icon-button"
-              aria-label="Refresh projects"
-              disabled={loading || pending !== null}
-              onClick={() => {
-                setLoading(true);
-                setReload((value) => value + 1);
-              }}
-            >
-              <RotateCw size={17} aria-hidden />
-            </button>
-          </div>
-          <p className="feedback error" role="alert">
-            {error}
-          </p>
-          <p className="feedback notice" role="status">
-            {notice}
-          </p>
-          {loading ? (
-            <div className="empty-state" role="status">
-              Loading your portfolio…
-            </div>
-          ) : error ? (
-            <div className="empty-state">
-              <h2>Let’s reconnect.</h2>
-              <p>
-                Your projects could not be loaded. Check the API and database
-                configuration, then refresh.
-              </p>
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state">
-              <span className="empty-mark" aria-hidden>
-                <BriefcaseBusiness size={30} />
-              </span>
-              <h2>
-                {query
-                  ? "No matching projects."
-                  : "Your next story starts here."}
-              </h2>
-              <p>
-                {query
-                  ? "Try another title, category, or technology."
-                  : "Add your first real project. No samples. No placeholders."}
-              </p>
-              {!query && (
-                <Button
-                  className="secondary"
-                  onClick={() => setEditor({ project: null })}
-                >
-                  Add a project
-                  <ArrowUpRight size={17} aria-hidden />
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Project</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Year</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((project) => (
-                    <tr key={project.id}>
-                      <td>
-                        <button
-                          className="project-title"
-                          disabled={pending !== null}
-                          onClick={() => setEditor({ project })}
-                        >
-                          {project.title}
-                          <ArrowUpRight size={15} aria-hidden />
-                        </button>
-                        <span className="project-slug">
-                          /{project.slug}
-                          {project.featured && (
-                            <span className="featured">Featured</span>
-                          )}
-                        </span>
-                      </td>
-                      <td>{project.category}</td>
-                      <td>{project.year}</td>
-                      <td>
-                        <span className="status">
-                          {project.status.replaceAll("_", " ")}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          <button
-                            className="icon-button"
-                            disabled={pending !== null}
-                            aria-label={`Edit ${project.title}`}
-                            onClick={() => setEditor({ project })}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            className="icon-button danger"
-                            disabled={pending !== null}
-                            aria-label={`Delete ${project.title}`}
-                            onClick={() => remove(project)}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="portfolio-note">
-            Saved projects appear on the public website. This workspace manages
-            portfolio content only.
-          </p>
-        </section>
+        <p className="feedback error" role="alert">
+          {error}
+        </p>
+        {view === "users" ? (
+          <Users identity={session} onExpired={onLogout} />
+        ) : view === "security" ? (
+          <Security onExpired={onLogout} />
+        ) : (
+          <ProjectWorkspace
+            identity={session}
+            onExpired={onLogout}
+            onDirtyChange={setDirty}
+          />
+        )}
         <footer className="workspace-footer">
           <span>PromDevs studio</span>
           <span>Thoughtfully built. Carefully maintained.</span>
         </footer>
       </main>
-      {editor && (
-        <ProjectEditor
-          project={editor.project}
-          onClose={() => setEditor(null)}
-          onExpired={onLogout}
-          onSaved={() => {
-            setEditor(null);
-            setNotice(
-              "Project saved. It is now available on the public website.",
-            );
-            setLoading(true);
-            setReload((value) => value + 1);
-          }}
-        />
-      )}
     </div>
   );
 }
 
 export function App() {
-  const [session, setSession] = useState<AdminSession | null>(null);
+  const [session, setSession] = useState<AdminIdentity | null>(null);
+  const [invitation, setInvitation] = useState(() => {
+    const token = new URLSearchParams(window.location.hash.slice(1)).get(
+      "invite",
+    );
+    return token;
+  });
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
+  const signedOut = useCallback((notice = "") => {
+    setSession(null);
+    setError(notice);
+  }, []);
+  const signedIn = useCallback(async () => {
+    setSession(adminIdentitySchema.parse(await api("/me")));
+    setError("");
+  }, []);
+  useEffect(() => {
+    function consumeInvitation() {
+      const token = new URLSearchParams(window.location.hash.slice(1)).get(
+        "invite",
+      );
+      if (!token) return;
+      setInvitation(token);
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
+    consumeInvitation();
+    window.addEventListener("hashchange", consumeInvitation);
+    return () => window.removeEventListener("hashchange", consumeInvitation);
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
-    void api<AdminSession>("/session", { signal: controller.signal })
+    void api("/me", { signal: controller.signal })
       .then((value) => {
-        if (!controller.signal.aborted) setSession(value);
+        if (!controller.signal.aborted)
+          setSession(adminIdentitySchema.parse(value));
       })
       .catch((reason) => {
         if (
@@ -463,6 +322,17 @@ export function App() {
       });
     return () => controller.abort();
   }, []);
+  if (invitation)
+    return (
+      <AcceptInvitation
+        key={invitation}
+        token={invitation}
+        onDone={() => {
+          setInvitation(null);
+          signedOut();
+        }}
+      />
+    );
   if (checking)
     return (
       <main className="session-loading" role="status">
@@ -470,14 +340,8 @@ export function App() {
       </main>
     );
   return session ? (
-    <Dashboard
-      session={session}
-      onLogout={() => {
-        setSession(null);
-        setError("");
-      }}
-    />
+    <Dashboard session={session} onLogout={signedOut} />
   ) : (
-    <Login initialError={error} onLogin={setSession} />
+    <Login initialError={error} onLogin={signedIn} />
   );
 }

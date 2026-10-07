@@ -52,6 +52,7 @@ After changing contracts, restart `pnpm dev` to rebuild the shared package.
 - `CONTACT_FROM_EMAIL`: defaults to `onboarding@resend.dev`; verify your own sender domain for production.
 - `CONTACT_FROM_NAME`, `CONTACT_TO_NAME`: optional email display names.
 - `ADMIN_ORIGIN`: exact admin origin, e.g. `http://localhost:5173` locally or `https://admin.promdevs.com` in production. No trailing slash or wildcard.
+- `ADMIN_FROM_EMAIL`: optional verified invitation sender; falls back to `CONTACT_FROM_EMAIL`. Invitations require `RESEND_API_KEY` and a sender and do not use the contact-form logging fallback.
 - `PORT`, `HOST`: default `4000` / `127.0.0.1`; the API Dockerfile sets `HOST=0.0.0.0`.
 - `NODE_ENV=production`: enables secure session cookies and disables local dotenv fallbacks.
 - `TRUST_PROXY`: false by default. Enable only when every path to the API is behind a trusted ingress that sanitizes `X-Forwarded-For`; prevent direct origin access. Otherwise use socket IPs. A shared proxy IP means requests share a rate-limit bucket.
@@ -91,14 +92,17 @@ If already seeded, do not seed again; use `admin:check` and sign in with the see
 owner credentials. Never paste the owner password into chat, command arguments,
 environment variables, or Git.
 
-The admin manages real projects: list/search, create, edit, feature, and delete,
-including case-study copy, links, technologies, and tags. New records are drafts.
-Public reads require `publication_status = published`; the existing `status`
-still describes work progress. The unchanged editor cannot publish or manage
-new schema fields/title-only drafts yet. Uploads, expanded draft workflows,
-account-management UI, invitations, password reset, MFA, and client-story management
-are not implemented yet. Editors can create/edit drafts, but cannot edit published
-or archived projects or delete projects. Owners and admins can edit/delete projects.
+The admin now has a full-page draft project editor: title-only creation, search,
+filters, pagination, skills, clients, contributors, Markdown case studies, media,
+links, timelines, and SEO preparation. Owners/admins can archive and restore;
+editors can create/edit drafts. Publishing is disabled and existing published
+records are read-only in this editor. See [project management](docs/project-management.md).
+Public reads still require `publication_status = published`; `status` describes
+work progress. Password recovery, MFA, and review management remain future work.
+Owners can use **Users** to invite people, change names/roles, disable/reactivate
+accounts, and revoke sessions. **Security** lets any signed-in user change their
+own password after confirming the current one. Editors can create/edit drafts, but cannot edit published
+or archived projects or delete projects. Legacy API permissions are retained; the new editor does not expose hard deletion.
 The public website retains its existing empty portfolio state when no projects exist.
 
 Authentication uses salted scrypt, random opaque sessions, HttpOnly/SameSite=Strict
@@ -112,6 +116,16 @@ Current role, status, and credential version are checked on every authenticated
 request. API restarts no longer sign users out. Legacy in-memory cookies will
 require a fresh login after this cutover. Login, logout, and project deletions
 write atomic audit events without credentials or tokens.
+Role/status changes and password changes revoke existing sessions atomically.
+The last active owner cannot be demoted/disabled, including concurrent requests.
+Invite links are single-use, expire after 72 hours, and carry tokens only in the
+URL fragment. The acceptance screen clears the fragment; no token goes into a
+URL query, API response, localStorage, or application log. Sending/resending and
+accepting invitations are audited. Failed delivery invalidates that link and
+leaves an invited account that an owner can resend to.
+
+Deploy the API first, then the admin for the new Users/Security screens. No new
+database migration is needed if the existing admin schema has already been applied.
 Run **one API replica** while rate limits are still in memory; a shared rate-limit
 store is required before scaling. Expired-session cleanup is not automated yet.
 
@@ -154,10 +168,12 @@ are performed. Migrate before deploying this API version.
 
 ## API
 
-Cloudflare R2 storage helpers are available in the API only. No upload routes or UI
-are exposed yet, and no bucket or live objects are created automatically. Follow
-[the storage guide](docs/storage.md) to configure credentials and Coolify. The
-initial helper supports JPEG/PNG/WebP images up to 10 MiB; other media comes later.
+Cloudflare R2 uploads are available to authenticated administrators through the
+new project editor. Images are limited to 10 MiB; MP4/WebM videos to 50 MiB.
+Uploads require R2 public delivery and ffprobe (included in the API Docker image).
+No bucket or live objects are created automatically. Follow [storage setup](docs/storage.md)
+and [project-management requirements](docs/project-management.md). Draft media URLs
+are public; do not upload confidential files.
 
 Skills imports are explicit API-only operations, not startup seeds. The supplied
 24-row catalog has been imported with original IDs/timestamps. See
@@ -182,7 +198,8 @@ its existing form interface. The API owns final validation, rate limiting, honey
 checking, and email delivery. Payload: `{ name, email, subject, message, company }`.
 If Resend is unconfigured, the existing explicit TODO server-log fallback remains.
 Logs can contain contact PII; protect log access and retention. Provider/database
-errors are never returned verbatim. API body size is limited to 64 KiB.
+errors are never returned verbatim. Existing JSON endpoints are limited to 64 KiB;
+new draft requests allow 256 KiB. Media uses a separately bounded raw-body route.
 
 Project pages fetch server-side without caching so admin changes are visible on the
 next request. Missing projects return 404; service outages on detail pages produce
