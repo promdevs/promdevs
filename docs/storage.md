@@ -2,14 +2,15 @@
 
 ## Scope
 
-API-only storage foundation for project images, client logos, and review images.
-No admin/website UI, upload endpoint, database migration, media table, automatic
-uploads, bucket provisioning, or live storage mutations are included. The API
-continues to start without R2 configured. Existing project URLs are unchanged.
+API-owned storage for project images and videos, plus helper support for client
+and review images. The admin project editor now exposes authenticated project
+uploads; the public website is unchanged. No database migration, media table,
+automatic uploads, bucket provisioning, or live mutations happen during setup.
+The API continues to start without R2; upload requests fail clearly when unconfigured.
 
-The server-side helper currently accepts JPEG, PNG, and WebP images up to 10 MiB.
-SVG, HTML, PDFs, videos, and other formats are deliberately not enabled. Video
-support and an authenticated upload workflow can be added separately.
+Project uploads accept JPEG/PNG/WebP up to 10 MiB and compatible MP4/WebM up to
+50 MiB. SVG, HTML, and PDFs remain disabled. See [project management](project-management.md)
+for codec limits, ffprobe setup, API behavior, and orphan retention.
 
 ## 1. Create the bucket
 
@@ -84,8 +85,8 @@ R2_PUBLIC_BASE_URL=https://media.promdevs.com
 
 **A public bucket exposes all its objects, including unpublished project images.**
 Do not store private client files, contracts, secrets, or confidential draft assets
-there. Private drafts need a separate private bucket and an authorized read/publish
-workflow before upload routes are introduced. Unpredictable filenames are not
+there. Confidential drafts need a separate private bucket and an authorized read/publish
+workflow, which the current public-media editor does not implement. Unpredictable filenames are not
 authorization. Setting or clearing `R2_PUBLIC_BASE_URL` does not change Cloudflare
 bucket access; it only controls generated URLs and upload cache metadata.
 
@@ -104,8 +105,10 @@ Plain image display generally does not need CORS, but browser fetch/canvas use m
 Add all R2 variables to the **API application only**, as Runtime Variables, not
 Build Variables. Keep secret values private. Use production bucket credentials
 there, not the development token. Redeploy/restart the API after updating settings.
-No storage container, Hetzner disk mount, web/admin variable, or Dockerfile change
-is needed. Keep the API's normal TLS verification enabled.
+No storage container, persistent Hetzner disk mount, or web/admin storage variable
+is needed. The API Dockerfile now installs ffmpeg for inspection; local development
+requires ffprobe on PATH. Temporary upload files use the API container's temporary
+directory and are removed after processing. Keep normal TLS verification enabled.
 
 Builds and tests require no R2 secrets and perform no live R2 writes. This change
 adds an API dependency to the root lockfile, so your existing shared-lockfile
@@ -130,12 +133,12 @@ or timed-out write can still leave an object in R2. Future upload endpoints must
 handle uncertain outcomes and orphan cleanup, not retry blindly or delete on every
 error. Deleted content may remain in a public CDN cache until purged or expired.
 
-Signature checks catch obvious format mismatches, not malformed images, malware,
-embedded metadata, or decompression bombs. Before exposing browser uploads, add
-authenticated/authorized routes, request-body limits, image decoding/re-encoding,
-pixel limits, metadata stripping, throttling, and a persistence/orphan strategy.
-The current JSON API body limit remains 64 KiB; do not send images through it.
-Do not call deletion automatically when deleting a project without checking reuse.
+The project upload route adds authentication, live authorization rechecks,
+streamed body limits, ffprobe codec/dimension inspection, and throttling. Inspection
+is not full decoding, re-encoding, metadata stripping, or malware scanning. Object
+retention/garbage collection remains manual: unlinking media does not delete it,
+and interrupted or abandoned edits can leave objects. Do not send files as JSON
+or delete project media automatically without checking reuse and CDN retention.
 
 Tests inject a fake transport; no real Cloudflare account is contacted.
 

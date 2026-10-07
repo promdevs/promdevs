@@ -2,6 +2,7 @@ import "../src/config.js";
 import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
 import { neon } from "@neondatabase/serverless";
+import { ADMIN_PASSWORD_MIN_LENGTH } from "@promdevs/contracts";
 import { hashPassword } from "../src/auth.js";
 import {
   OwnerBootstrapError,
@@ -49,7 +50,7 @@ async function promptOwner() {
     const name = await question("Owner display name: ");
     const details = validateOwnerDetails(email, name);
     const password = await secret(
-      "New owner password (hidden, 16-1024 characters): ",
+      `New owner password (hidden, ${ADMIN_PASSWORD_MIN_LENGTH}-1024 characters): `,
     );
     const confirmation = await secret("Confirm password (hidden): ");
     validateOwnerPassword(password, confirmation);

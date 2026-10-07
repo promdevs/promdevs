@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { Readable } from "node:stream";
 import {
   HeadBucketCommand,
   HeadObjectCommand,
@@ -33,6 +34,51 @@ const png = Buffer.from(
   "base64",
 );
 const key = "images/projects/12345678-1234-4234-8234-123456789012.png";
+
+test("video storage streams bounded media with immutable metadata and managed deletion", async () => {
+  const { transport, commands } = mockTransport();
+  const storage = createR2Storage(config, transport);
+  const body = Readable.from(Buffer.from("inspected video fixture"));
+  const video = await storage.uploadVideo({
+    body,
+    size: 23,
+    contentType: "video/mp4",
+  });
+  const command = commands[0];
+  assert.ok(command instanceof PutObjectCommand);
+  assert.equal(command.input.Body, body);
+  assert.equal(command.input.ContentLength, 23);
+  assert.equal(command.input.ContentType, "video/mp4");
+  assert.equal(command.input.IfNoneMatch, "*");
+  assert.equal(
+    command.input.CacheControl,
+    "public, max-age=31536000, immutable",
+  );
+  assert.match(video.key, /^videos\/projects\/[a-f0-9-]+\.mp4$/);
+  assert.equal(video.url, `${config.publicBaseUrl}/${video.key}`);
+  await storage.deleteProjectMedia(video.key);
+  assert.ok(commands[1] instanceof DeleteObjectCommand);
+  assert.equal(commands[1].input.Key, video.key);
+  for (const size of [0, -1, NaN, Infinity, 1.5, 50 * 1024 * 1024 + 1]) {
+    await assert.rejects(
+      storage.uploadVideo({ body, size, contentType: "video/mp4" }),
+      StorageError,
+    );
+  }
+  await assert.rejects(
+    storage.deleteProjectMedia("videos/projects/../../other.mp4"),
+    StorageError,
+  );
+  const privateStorage = createR2Storage(
+    { ...config, publicBaseUrl: null },
+    transport,
+  );
+  await assert.rejects(
+    privateStorage.uploadVideo({ body, size: 23, contentType: "video/mp4" }),
+    StorageError,
+  );
+  assert.equal(commands.length, 2);
+});
 
 function mockTransport() {
   const commands: Parameters<StorageTransport["send"]>[0][] = [];

@@ -9,12 +9,15 @@ There is no `ADMIN_EMAIL` / `ADMIN_PASSWORD_HASH` fallback. The user applied the
 schema migration and ran the owner bootstrap; the agent does not seed or mutate
 live accounts during verification.
 
-Existing project routes enforce current database roles. Account-management and
-invitation routes/UI are still future work: do not manually onboard additional
-users or change credentials without applying the invariants documented below.
-The role matrix describes the policy, not a claim that every listed feature has
-an implemented endpoint. Publishing, uploads, user management, and audit viewing
-are not exposed by this change.
+Existing project routes enforce current database roles. The admin now includes
+owner-only **Users** management, a **Security** screen for every signed-in user,
+and a separate invitation acceptance screen. Deploy the API first, then the admin;
+no schema changes or migration are needed for this step.
+The role matrix describes the overall policy, not a claim that every listed feature
+is exposed. Publishing and audit viewing are not implemented. The new
+[project editor](project-management.md) allows draft edits/uploads for all three
+roles and archive/restore for owners/admins; published records are read-only there.
+Legacy project endpoints retain their prior permissions.
 
 ## Roles
 
@@ -91,7 +94,9 @@ Role changes, password changes, disable/reactivate operations must increment the
 user's version and revoke sessions atomically. This prevents old cookies from
 regaining access after reactivation. Check current state on every request; never
 trust a role submitted by the browser or stored in a stale session snapshot.
-The schema does not implement those checks or increments automatically.
+Account-management services implement these checks, increments, revocations and
+safe audit events atomically. Direct database edits bypass the service safeguards
+and must not be used as a normal management workflow.
 
 Continue using HttpOnly, Secure-in-production, SameSite cookies, bounded lifetime,
 login throttling, token rotation on login, and origin checks for mutations. Never
@@ -107,15 +112,30 @@ expired one, before issuing a replacement. Accepted and revoked cannot coexist;
 acceptance must occur before expiry. Self-invitations are rejected.
 
 The role lives on `admin_users`, not in an invite snapshot. Changing roles or
-email while an invite is pending must revoke/reissue the invite in the future
-service, rather than allowing an old link to silently activate altered access.
+email while an invite is pending must revoke/reissue the invite, rather than
+allowing an old link to silently activate altered access. Email editing is not
+exposed by this version. Role/status changes revoke both invitations for that
+account and invitations it issued; resend is an explicit separate action.
 Acceptance must consume the token and set password/status/verification timestamps
 atomically, with a conditional one-time update. These cross-table invariants and
 current-owner checks are not enforced by CHECK constraints alone.
 
-No public registration. Raw invitation tokens are shown/sent once and never stored
-in logs or database rows. Email delivery and resend/accept/revoke endpoints are
-not implemented in this change.
+No public registration. The owner chooses a name, email and role; the recipient
+chooses their own password using a private emailed link. Raw tokens are sent once
+by email and never returned in API responses or stored in logs/database rows.
+Links use `/#invite=<token>` at the configured `ADMIN_ORIGIN`, not URL queries.
+The admin clears the fragment and keeps the token in component memory only.
+Acceptance uses a POST JSON body, verifies the current inviter is an active owner,
+and activates the account with password/verification timestamps atomically.
+There is no automatic login after acceptance; the recipient must sign in.
+
+Invites expire after 72 hours. Resend revokes all unresolved prior links first.
+Missing email configuration stops before any account write; provider failure
+revokes that newly issued invitation and retains the invited account for recovery.
+If revocation itself cannot be confirmed, the API fails closed rather than
+claiming successful delivery. A disabled account without credentials can receive
+a fresh invitation and return to `invited`; an established disabled account must
+be deliberately reactivated instead. No existing password is overwritten by resend.
 
 ### `admin_audit_logs`
 
@@ -125,9 +145,9 @@ and `created_at`. Actor references restrict hard deletion; a NULL actor is reser
 for intentional system/bootstrap events. Target IDs support UUID administrator
 IDs and existing integer portfolio IDs without coupling history to deletable rows.
 
-Login/session rotation, logout/session revocation, and project deletion already
-write atomic audit events. Future services must do the same for role changes,
-deactivation, and publishing. Metadata must use an explicit safe allowlist
+Login/session rotation, logout/session revocation, project deletion, account changes,
+password changes, and invitation creation/resend/acceptance already write atomic
+audit events. Future publishing services must do the same. Metadata uses an explicit safe allowlist
 such as old/new role or publication status. Never copy whole request/user rows,
 passwords, password hashes, bearer tokens, signed URLs, or provider credentials.
 The intended API interface is append-only; the table is not tamper-proof against
@@ -164,7 +184,7 @@ pnpm admin:check
 ```
 
 No argument defaults to the read-only check. `--apply` requires your own interactive
-terminal and prompts for owner email, name, a new password (16-1024 characters),
+terminal and prompts for owner email, name, a new password (9-1024 characters),
 and matching confirmation. Password entry is hidden, and no password/hash is
 printed. Check that your API environment points at the intended database first.
 Type `CREATE OWNER` at the final prompt to authorize the write. Ctrl+C, EOF,
@@ -202,15 +222,41 @@ concurrent publishing from bypassing the restriction. Creates always remain draf
 Owners/admins may edit archived/published records and delete projects. Deletes
 record actor identity atomically; a failed audit write rolls back the deletion.
 
-Future owner-management transactions must prevent demoting/disabling the last
-active owner using a serialized check/lock. A CHECK constraint cannot enforce
-that multi-row invariant, and this schema intentionally permits an empty initial
-account table before the owner is seeded. No claim of last-owner protection is
-made until the service implements it.
+Owner-management transactions prevent demoting/disabling the last active owner
+using a `SHARE ROW EXCLUSIVE` lock on `admin_users` and a fresh Read Committed
+snapshot after acquiring the lock. The actor's current owner role, active status,
+and authentication version are checked again inside the transaction. Competing
+owner changes cannot both remove the last owner. These low-volume administrator
+writes are serialized; ordinary account reads do not need that lock. Application
+writers use the same locking protocol. The safeguard does not protect against
+manual changes by a privileged database operator.
 
-No multi-user UI, password reset, MFA, OAuth, configurable permissions, automatic
+No password-recovery flow, MFA, OAuth, configurable permissions, automatic
 cleanup, or client-facing account system is included. Admin accounts do not
 replace portfolio contributors or link them automatically.
+
+## Account endpoints
+
+All responses are `Cache-Control: no-store`. Every mutation checks the exact
+admin origin and is rate-limited. Role/status values are strict, unknown fields
+are rejected, and users cannot submit password hashes or authentication versions.
+
+| Endpoint                                    | Access           | Behavior                                                                                                                      |
+| ------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/admin/me`                         | Signed in        | Current ID, email and role; existing `/session` response stays unchanged.                                                     |
+| `GET /api/admin/users?limit=50&offset=0`    | Owner            | Paginated safe account fields; no hashes, token digests or credentials.                                                       |
+| `PATCH /api/admin/users/:id`                | Owner            | Name, role, active/disabled status. Name-only changes preserve sessions; access changes revoke them and relevant invitations. |
+| `POST /api/admin/users/:id/sessions/revoke` | Owner            | Increment credential version, revoke all sessions, audit. Revoking your own sessions signs you out.                           |
+| `POST /api/admin/users/invitations`         | Owner            | Create invited account and email a private link. No default password.                                                         |
+| `POST /api/admin/users/:id/invitation`      | Owner            | Rotate and resend for an unactivated account; never reset an established account's password.                                  |
+| `POST /api/admin/invitations/preview`       | Valid invitation | Validate JSON token and show recipient/role; no writes.                                                                       |
+| `POST /api/admin/invitations/accept`        | Valid invitation | One-time activation with password and matching confirmation; no session issued.                                               |
+| `POST /api/admin/password`                  | Signed in        | Verify current password, require a different matching 9-1024-character password, revoke every session including the caller.   |
+
+The optional `ADMIN_FROM_EMAIL` falls back to `CONTACT_FROM_EMAIL`. A configured
+Resend key and verified sender are required for invitations. There is **no** log
+fallback for authentication links. UI visibility is convenience, not security:
+the API rechecks permissions and current account state independently.
 
 ## Verification
 
@@ -221,6 +267,11 @@ using temporary test accounts only; no live database is connected or mutated.
 HTTP tests also cover all three roles, draft versus published/archived edits,
 deletion denial, immediate role/status changes, persistent token rotation/logout,
 expiry, auth-version invalidation, login races, and fail-closed database outages.
+Account tests add owner-only endpoint denial, pagination/input validation,
+single-use/expired invitations, resend rotation, email-failure handling, current-
+password verification, and session revocation. Isolated PostgreSQL checks verify
+the real queries, last-owner serialization, response allowlists, and audit-failure
+rollback. Browser checks use temporary fixture accounts and a mock mailer only.
 
 References: [OWASP authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html),
 [OWASP sessions](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html),

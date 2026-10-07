@@ -101,3 +101,112 @@ export const loginSchema = z
   })
   .strict();
 export type AdminSession = { email: string };
+export const ADMIN_PASSWORD_MIN_LENGTH = 9;
+
+const adminName = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .refine(
+    (value) => !/[\p{Cc}\p{Cf}]/u.test(value),
+    "Names must not contain control characters",
+  );
+const adminRole = z.enum(["owner", "admin", "editor"]);
+const adminStatus = z.enum(["invited", "active", "disabled"]);
+export const adminAccountSchema = z
+  .object({
+    id: z.string().uuid(),
+    email: z.string().email(),
+    name: adminName,
+    role: adminRole,
+    status: adminStatus,
+    invitationRequired: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+    lastLoginAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .strict();
+export type AdminAccount = z.infer<typeof adminAccountSchema>;
+export const adminAccountUpdateSchema = z
+  .object({
+    name: adminName.optional(),
+    role: adminRole.optional(),
+    status: z.enum(["active", "disabled"]).optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, "Choose a field to update");
+export type AdminAccountUpdate = z.infer<typeof adminAccountUpdateSchema>;
+export const adminPasswordChangeSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(1024),
+    newPassword: z
+      .string()
+      .min(ADMIN_PASSWORD_MIN_LENGTH)
+      .max(1024)
+      .refine((value) => !!value.trim(), "Choose a nonblank password"),
+    confirmation: z.string().min(ADMIN_PASSWORD_MIN_LENGTH).max(1024),
+  })
+  .strict()
+  .refine(
+    (value) => value.newPassword === value.confirmation,
+    "Passwords must match",
+  )
+  .refine(
+    (value) => value.newPassword !== value.currentPassword,
+    "Choose a different password",
+  );
+export type AdminPasswordChange = z.infer<typeof adminPasswordChangeSchema>;
+export const adminUsersQuerySchema = z
+  .object({
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    offset: z.coerce.number().int().min(0).max(10000).default(0),
+  })
+  .strict();
+export const adminUsersResponseSchema = z
+  .object({
+    users: z.array(adminAccountSchema),
+    total: z.number().int().nonnegative(),
+    limit: z.number().int().positive(),
+    offset: z.number().int().nonnegative(),
+  })
+  .strict();
+export const adminInviteSchema = z
+  .object({
+    name: adminName,
+    email: z
+      .string()
+      .trim()
+      .email()
+      .max(254)
+      .transform((value) => value.toLowerCase()),
+    role: adminRole.default("editor"),
+  })
+  .strict();
+export type AdminInvite = z.infer<typeof adminInviteSchema>;
+export const invitationTokenSchema = z
+  .object({ token: z.string().regex(/^[a-f0-9]{64}$/) })
+  .strict();
+export const invitationAcceptSchema = invitationTokenSchema
+  .extend({
+    password: z
+      .string()
+      .min(ADMIN_PASSWORD_MIN_LENGTH)
+      .max(1024)
+      .refine((value) => !!value.trim(), "Choose a nonblank password"),
+    confirmation: z.string().min(ADMIN_PASSWORD_MIN_LENGTH).max(1024),
+  })
+  .refine(
+    (value) => value.password === value.confirmation,
+    "Passwords must match",
+  );
+export const adminIdentitySchema = z
+  .object({
+    id: z.string().uuid(),
+    email: z.string().email(),
+    role: adminRole,
+  })
+  .strict();
+export type AdminIdentity = z.infer<typeof adminIdentitySchema>;
+
+export * from "./portfolio.js";

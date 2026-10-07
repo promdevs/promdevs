@@ -6,7 +6,7 @@ RUN pnpm install --frozen-lockfile && pnpm build:api && pnpm --filter @promdevs/
 
 FROM node:24-bookworm-slim AS runtime
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates \
+    && apt-get install -y --no-install-recommends curl ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production PORT=4000 HOST=0.0.0.0
