@@ -2,15 +2,17 @@ import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createApiServer } from "../src/server.js";
-import { hashPassword, verifyPassword, Sessions } from "../src/auth.js";
+import { hashPassword, verifyPassword } from "../src/auth.js";
 import { RateLimiter } from "../src/rate-limit.js";
 import { projectInputSchema, contactSchema } from "@promdevs/contracts";
-import { MemoryProjects } from "./fixtures.js";
+import { MemoryProjects, MemoryAuth } from "./fixtures.js";
+import { databaseAuthStore } from "../src/access-control/auth-store.js";
 
 const origin = "http://admin.test";
 const email = "admin@example.test";
 const password = "a long test-only passphrase";
 const store = new MemoryProjects();
+const authStore = new MemoryAuth();
 let sent = 0;
 let base = "";
 let passwordHash = "";
@@ -26,14 +28,21 @@ const input = {
 
 before(async () => {
   passwordHash = await hashPassword(password);
+  authStore.users.set("00000000-0000-4000-8000-000000000001", {
+    id: "00000000-0000-4000-8000-000000000001",
+    email,
+    passwordHash,
+    role: "owner",
+    status: "active",
+    authVersion: 1,
+  });
   server = createApiServer({
     store,
     sendEmail: async () => {
       sent++;
     },
     adminOrigin: origin,
-    adminEmail: email,
-    passwordHash,
+    authStore,
     secureCookies: true,
     trustProxy: false,
   });
@@ -291,15 +300,6 @@ test("login rate limit cannot be bypassed by spoofing forwarding headers", async
   });
   assert.equal(response.status, 429);
 });
-test("sessions expire and logout removes them", () => {
-  const sessions = new Sessions();
-  const token = sessions.create(email, 1000);
-  assert.equal(sessions.get(token, 2000)?.email, email);
-  assert.equal(sessions.get(token, 1000 + sessions.maxAge * 1000), null);
-  const next = sessions.create(email);
-  sessions.remove(next);
-  assert.equal(sessions.get(next), null);
-});
 test("rate limit windows reset and keys are independent", () => {
   const limiter = new RateLimiter();
   assert.equal(limiter.take("a", 1, 100, 1000).allowed, true);
@@ -332,13 +332,14 @@ test("contracts reject unsafe URLs, path traversal, and unknown fields", () => {
     true,
   );
 });
-test("unconfigured admin fails closed", async () => {
+test("unconfigured database fails closed without an environment-login fallback", async () => {
+  const previous = process.env.DATABASE_URL;
+  delete process.env.DATABASE_URL;
   const isolated = createApiServer({
     store,
     sendEmail: async () => {},
     adminOrigin: origin,
-    adminEmail: "",
-    passwordHash: "",
+    authStore: databaseAuthStore,
     secureCookies: false,
     trustProxy: false,
   });
@@ -348,11 +349,15 @@ test("unconfigured admin fails closed", async () => {
   assert.ok(address && typeof address !== "string");
   try {
     assert.equal(
-      (await fetch(`http://127.0.0.1:${address.port}/api/admin/session`))
-        .status,
+      (
+        await fetch(`http://127.0.0.1:${address.port}/api/admin/session`, {
+          headers: { Cookie: `promdevs_session=${"a".repeat(64)}` },
+        })
+      ).status,
       503,
     );
   } finally {
+    if (previous !== undefined) process.env.DATABASE_URL = previous;
     isolated.close();
     isolated.closeAllConnections();
     await once(isolated, "close");

@@ -1,4 +1,5 @@
 import { relations, sql, type SQL } from "drizzle-orm";
+export * from "./admin-schema.js";
 import {
   boolean,
   check,

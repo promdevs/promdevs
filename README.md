@@ -47,11 +47,10 @@ After changing contracts, restart `pnpm dev` to rebuild the shared package.
 
 **API only** (`apps/api/.env` locally; Coolify API runtime variables in production):
 
-- `DATABASE_URL`: existing Neon PostgreSQL connection string; required for projects.
+- `DATABASE_URL`: existing Neon PostgreSQL connection string; required for projects and database-backed admin authentication.
 - `RESEND_API_KEY`, `CONTACT_TO_EMAIL`: required for real email delivery.
 - `CONTACT_FROM_EMAIL`: defaults to `onboarding@resend.dev`; verify your own sender domain for production.
 - `CONTACT_FROM_NAME`, `CONTACT_TO_NAME`: optional email display names.
-- `ADMIN_EMAIL`, `ADMIN_PASSWORD_HASH`: both required to enable admin login.
 - `ADMIN_ORIGIN`: exact admin origin, e.g. `http://localhost:5173` locally or `https://admin.promdevs.com` in production. No trailing slash or wildcard.
 - `PORT`, `HOST`: default `4000` / `127.0.0.1`; the API Dockerfile sets `HOST=0.0.0.0`.
 - `NODE_ENV=production`: enables secure session cookies and disables local dotenv fallbacks.
@@ -72,23 +71,34 @@ Never place credentials in `VITE_*` or `NEXT_PUBLIC_*` variables.
 
 ### Enable Your Administrator
 
-Run the hidden-input password generator in an interactive terminal:
+Admin login uses `admin_users` and persistent `admin_sessions`. The API enforces
+Owner/Admin/Editor permissions; see [admin access control](docs/admin-access-control.md).
+There is no environment-login fallback, public registration, or default password.
+`ADMIN_EMAIL` and `ADMIN_PASSWORD_HASH` are no longer read: remove them from local
+environment files and Coolify **after deploying this API version**.
+
+After applying the admin schema, bootstrap the first owner in your own terminal:
 
 ```sh
-pnpm admin:password
+pnpm admin:seed-owner --check  # read-only readiness check
+pnpm admin:seed-owner --apply  # hidden password prompts; explicit write confirmation
+pnpm admin:check              # read-only schema and active-owner verification
 ```
 
-Use a unique password of at least 16 characters. Set the generated scrypt hash and
-`ADMIN_EMAIL` on the API, then restart it. Quote the hash with single quotes in dotenv
-files. Do not put the password in a command argument, commit it, or publish the hash.
-There is no registration endpoint or default administrator/password.
+The seed refuses any existing accounts/prior bootstrap, never promotes or
+overwrites a user, and inserts an owner plus audit event in one transaction.
+If already seeded, do not seed again; use `admin:check` and sign in with the seeded
+owner credentials. Never paste the owner password into chat, command arguments,
+environment variables, or Git.
 
 The admin manages real projects: list/search, create, edit, feature, and delete,
 including case-study copy, links, technologies, and tags. New records are drafts.
 Public reads require `publication_status = published`; the existing `status`
 still describes work progress. The unchanged editor cannot publish or manage
 new schema fields/title-only drafts yet. Uploads, expanded draft workflows,
-multi-user roles, MFA, and client-story management are not implemented yet.
+account-management UI, invitations, password reset, MFA, and client-story management
+are not implemented yet. Editors can create/edit drafts, but cannot edit published
+or archived projects or delete projects. Owners and admins can edit/delete projects.
 The public website retains its existing empty portfolio state when no projects exist.
 
 Authentication uses salted scrypt, random opaque sessions, HttpOnly/SameSite=Strict
@@ -97,9 +107,13 @@ for every admin route. The admin proxies `/api` through its own origin, so brows
 cookies are not shared across domains and no permissive CORS policy is needed.
 Use HTTPS in production. You can add Cloudflare Access as another protective layer.
 
-Sessions last eight hours and are held in memory; an API restart signs users out.
-Run **one API replica** for this initial implementation. Shared persistent sessions
-and rate-limit storage are required before scaling to multiple replicas.
+Sessions last eight hours and store only SHA-256 token digests in PostgreSQL.
+Current role, status, and credential version are checked on every authenticated
+request. API restarts no longer sign users out. Legacy in-memory cookies will
+require a fresh login after this cutover. Login, logout, and project deletions
+write atomic audit events without credentials or tokens.
+Run **one API replica** while rate limits are still in memory; a shared rate-limit
+store is required before scaling. Expired-session cleanup is not automated yet.
 
 ## Commands
 
@@ -123,6 +137,8 @@ pnpm db:generate --name=portfolio_schema  # offline SQL generation
 pnpm db:migrate        # preflight, then apply reviewed SQL; requires DATABASE_URL
 pnpm skills:import /absolute/path/skills.csv --dry-run # validate and check conflicts
 pnpm storage:check      # read-only R2 bucket access check; requires R2 configuration
+pnpm admin:seed-owner --check # read-only first-owner readiness check
+pnpm admin:check        # read-only schema/active-owner check (no credential output)
 ```
 
 The web build uses Webpack because the local Turbopack sandbox previously failed.

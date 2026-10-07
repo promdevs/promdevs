@@ -24,7 +24,8 @@
     "db:generate": "pnpm --filter @promdevs/api db:generate",
     "db:status": "pnpm --filter @promdevs/api db:status",
     "db:migrate": "pnpm --filter @promdevs/api db:migrate",
-    "admin:password": "pnpm --filter @promdevs/api admin:password",
+    "admin:check": "pnpm --filter @promdevs/contracts build && pnpm --filter @promdevs/api admin:check",
+    "admin:seed-owner": "pnpm --filter @promdevs/contracts build && pnpm --filter @promdevs/api admin:seed-owner",
     "format": "prettier --write apps packages scripts deploy README.md",
     "social:prepare": "pnpm --filter @promdevs/web exec node scripts/assets/prepare-social-card.mjs"
   },

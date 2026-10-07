@@ -7,17 +7,17 @@ No deployment settings in this document have been applied to your server.
 
 ## What triggers a deployment?
 
-| Change | Expected automatic deployment with the filters below |
-| --- | --- |
-| Admin source in `apps/admin` | Admin only |
-| Website source in `apps/web` | Web only |
-| API source in `apps/api` | API only |
-| `packages/ui` | Admin only; web does not currently import this package |
-| `packages/contracts` | All three; all depend on the contract |
-| Root package manager files or TypeScript base config | All three |
-| One app's Dockerfile | That app only |
-| README or this guide | None |
-| Editing a project through the admin UI | None; writes data, not source code |
+| Change                                               | Expected automatic deployment with the filters below   |
+| ---------------------------------------------------- | ------------------------------------------------------ |
+| Admin source in `apps/admin`                         | Admin only                                             |
+| Website source in `apps/web`                         | Web only                                               |
+| API source in `apps/api`                             | API only                                               |
+| `packages/ui`                                        | Admin only; web does not currently import this package |
+| `packages/contracts`                                 | All three; all depend on the contract                  |
+| Root package manager files or TypeScript base config | All three                                              |
+| One app's Dockerfile                                 | That app only                                          |
+| README or this guide                                 | None                                                   |
+| Editing a project through the admin UI               | None; writes data, not source code                     |
 
 An admin-only dependency change can also update the root `pnpm-lock.yaml`, which
 intentionally redeploys all three. Do not omit the lockfile from filters just to
@@ -42,14 +42,14 @@ See [automatic deployments](https://coolify.io/docs/applications/deployments/aut
 
 Use these settings for each application:
 
-| Setting | API | Admin | Website |
-| --- | --- | --- | --- |
-| Name | `promdevs-api` | `promdevs-admin` | `promdevs-web` |
-| Base Directory / build context | `/` | `/` | `/` |
-| Dockerfile Location, relative to root | `deploy/api.Dockerfile` | `deploy/admin.Dockerfile` | `deploy/web.Dockerfile` |
-| Ports Exposes | `4000` | `80` | `3000` |
-| Domain | `https://api.promdevs.com` | `https://admin.promdevs.com` | `https://promdevs.com` |
-| Container health path | `/health` | `/health` | `/` |
+| Setting                               | API                        | Admin                        | Website                 |
+| ------------------------------------- | -------------------------- | ---------------------------- | ----------------------- |
+| Name                                  | `promdevs-api`             | `promdevs-admin`             | `promdevs-web`          |
+| Base Directory / build context        | `/`                        | `/`                          | `/`                     |
+| Dockerfile Location, relative to root | `deploy/api.Dockerfile`    | `deploy/admin.Dockerfile`    | `deploy/web.Dockerfile` |
+| Ports Exposes                         | `4000`                     | `80`                         | `3000`                  |
+| Domain                                | `https://api.promdevs.com` | `https://admin.promdevs.com` | `https://promdevs.com`  |
+| Container health path                 | `/health`                  | `/health`                    | `/`                     |
 
 Do not set Base Directory to an individual app: the Dockerfiles need the root
 workspace and shared packages. No custom install/build/start command is needed;
@@ -121,31 +121,35 @@ container or persistent Hetzner volume to add, and upload UI/routes are not enab
 
 In Configuration > Environment Variables, enable Runtime Variable and disable
 Build Variable for these settings. The builds need no production credentials.
-Add secrets in the Normal view; enable Literal for the password hash so its `$`
-characters are preserved. Do not paste surrounding shell quotes into the value.
+Add secrets in the Normal view. Do not paste surrounding shell quotes into values.
 See [environment variables](https://coolify.io/docs/applications/configuration/environment-variables).
 
 ### API
 
-| Variable | Value |
-| --- | --- |
-| `NODE_ENV` | `production` |
-| `HOST` | `0.0.0.0` (do not copy the local `127.0.0.1` setting) |
-| `PORT` | `4000` |
-| `DATABASE_URL` | Your existing database connection string |
-| `ADMIN_EMAIL` | Your administrator email |
-| `ADMIN_PASSWORD_HASH` | Output of `pnpm admin:password` run locally |
-| `ADMIN_ORIGIN` | `https://admin.promdevs.com` exactly, no trailing slash |
-| `RESEND_API_KEY` | Your private Resend API key |
-| `CONTACT_TO_EMAIL` | Your receiving inbox |
-| `CONTACT_FROM_EMAIL` | A sender at your verified Resend domain |
-| `TRUST_PROXY` | `false` initially; see the security note below |
+| Variable             | Value                                                   |
+| -------------------- | ------------------------------------------------------- |
+| `NODE_ENV`           | `production`                                            |
+| `HOST`               | `0.0.0.0` (do not copy the local `127.0.0.1` setting)   |
+| `PORT`               | `4000`                                                  |
+| `DATABASE_URL`       | Your existing database connection string                |
+| `ADMIN_ORIGIN`       | `https://admin.promdevs.com` exactly, no trailing slash |
+| `RESEND_API_KEY`     | Your private Resend API key                             |
+| `CONTACT_TO_EMAIL`   | Your receiving inbox                                    |
+| `CONTACT_FROM_EMAIL` | A sender at your verified Resend domain                 |
+| `TRUST_PROXY`        | `false` initially; see the security note below          |
 
-Use a unique admin password of at least 16 characters. Store the hash only on the
-API, not the plaintext password. Resend's `onboarding@resend.dev` default is for
+Admin credentials now live in PostgreSQL, not Coolify variables. Apply the reviewed
+admin migration and seed the first owner explicitly before deploying the cutover.
+If already seeded, use `pnpm admin:check` against the intended API database and do
+not seed again. Sign in with the seeded owner credentials after deploying the API;
+old in-memory sessions require a fresh login. Then remove `ADMIN_EMAIL` and
+`ADMIN_PASSWORD_HASH` from Coolify. They are ignored by this version and no legacy
+fallback remains. No admin rebuild is required for this auth change.
+
+Resend's `onboarding@resend.dev` default is for
 initial testing; configure your verified domain for normal production delivery.
-Deploy **one API replica**: sessions and rate limits are currently in memory.
-An API restart signs administrators out; it does not delete database projects.
+Deploy **one API replica** while rate limits remain in memory. Sessions are persisted
+in `admin_sessions` and survive API restarts; they expire after eight hours.
 
 ### Admin
 
