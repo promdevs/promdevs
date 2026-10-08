@@ -1,10 +1,20 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   ArrowUpRight,
   BriefcaseBusiness,
   LogOut,
   UsersRound,
   ShieldCheck,
+  Building2,
+  MessageSquareQuote,
+  Tags,
+  ContactRound,
 } from "lucide-react";
 import {
   type AdminSession,
@@ -13,6 +23,8 @@ import {
 } from "@promdevs/contracts";
 import { Button, Wordmark } from "@promdevs/ui";
 import { api, ApiError } from "./api";
+import { CatalogWorkspace } from "./CatalogWorkspace";
+import { adminRoute } from "./routes";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { Users } from "./Users";
 import { Security } from "./Security";
@@ -133,29 +145,80 @@ function Dashboard({
   session: AdminIdentity;
   onLogout: (notice?: string) => void;
 }) {
-  const [view, setView] = useState<"projects" | "users" | "security">(
-    "projects",
-  );
+  const [path, setPath] = useState(() => {
+    const legacy = /^#projects\/(new|[1-9]\d*)$/.exec(window.location.hash);
+    const next = legacy
+      ? "/projects/" + legacy[1]
+      : window.location.pathname === "/"
+        ? "/projects"
+        : window.location.pathname;
+    return next;
+  });
+  useEffect(() => {
+    if (
+      window.location.pathname === "/" ||
+      /^#projects\/(new|[1-9]\d*)$/.test(window.location.hash)
+    ) {
+      window.history.replaceState(null, "", path + window.location.search);
+    }
+  }, [path]);
+  const { view, selected } = adminRoute(path);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [dirty, setDirty] = useState(false);
-  const changeView = (next: typeof view) => {
-    if (next === view) return;
+  const dirty = useRef(false);
+  const current = useRef(path);
+  const updateDirty = useCallback((value: boolean) => {
+    dirty.current = value;
+  }, []);
+  const navigate = useCallback((next: string, replace = false) => {
+    if (next === current.current) return;
     if (
-      dirty &&
-      !window.confirm("Leave this project and discard unsaved changes?")
+      dirty.current &&
+      !window.confirm("Discard unsaved changes and leave this page?")
     )
       return;
-    setDirty(false);
-    setView(next);
-    window.history.replaceState(
-      null,
-      "",
-      window.location.pathname + window.location.search,
-    );
-  };
+    dirty.current = false;
+    window.history[replace ? "replaceState" : "pushState"](null, "", next);
+    current.current = next;
+    setPath(next);
+  }, []);
+  useEffect(() => {
+    const pop = () => {
+      const next = window.location.pathname;
+      if (next === current.current) return;
+      if (
+        dirty.current &&
+        !window.confirm("Discard unsaved changes and leave this page?")
+      ) {
+        window.history.pushState(null, "", current.current);
+        return;
+      }
+      dirty.current = false;
+      current.current = next;
+      setPath(next);
+    };
+    const unload = (event: BeforeUnloadEvent) => {
+      if (dirty.current) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+    window.addEventListener("popstate", pop);
+    window.addEventListener("beforeunload", unload);
+    return () => {
+      window.removeEventListener("popstate", pop);
+      window.removeEventListener("beforeunload", unload);
+    };
+  }, []);
+  useEffect(() => {
+    document.title = `${view === "not-found" ? "Page not found" : view[0].toUpperCase() + view.slice(1)} | PromDevs admin`;
+    document.getElementById("workspace-main")?.focus();
+  }, [path, view]);
   async function logout() {
-    if (dirty && !window.confirm("Sign out and discard unsaved changes?"))
+    if (
+      dirty.current &&
+      !window.confirm("Sign out and discard unsaved changes?")
+    )
       return;
     setBusy(true);
     try {
@@ -176,35 +239,38 @@ function Dashboard({
         <Brand />
         <p className="eyebrow sidebar-label">Workspace</p>
         <nav aria-label="Admin navigation">
-          <button
-            type="button"
-            onClick={() => changeView("projects")}
-            className={`sidebar-link ${view === "projects" ? "active" : ""}`}
-            aria-current={view === "projects" ? "page" : undefined}
-          >
-            <BriefcaseBusiness size={18} aria-hidden />
-            Projects
-          </button>
-          {session.role === "owner" && (
-            <button
-              type="button"
-              onClick={() => changeView("users")}
-              className={`sidebar-link ${view === "users" ? "active" : ""}`}
-              aria-current={view === "users" ? "page" : undefined}
+          {[
+            { key: "projects", label: "Projects", Icon: BriefcaseBusiness },
+            { key: "clients", label: "Clients", Icon: Building2 },
+            { key: "reviews", label: "Reviews", Icon: MessageSquareQuote },
+            { key: "skills", label: "Skills", Icon: Tags },
+            { key: "contributors", label: "Contributors", Icon: ContactRound },
+            ...(session.role === "owner"
+              ? [{ key: "users", label: "Users", Icon: UsersRound }]
+              : []),
+            { key: "security", label: "Security", Icon: ShieldCheck },
+          ].map(({ key, label, Icon }) => (
+            <a
+              key={key}
+              href={"/" + key}
+              className={`sidebar-link ${view === key ? "active" : ""}`}
+              aria-current={view === key ? "page" : undefined}
+              onClick={(event) => {
+                if (
+                  !event.ctrlKey &&
+                  !event.metaKey &&
+                  !event.shiftKey &&
+                  !event.altKey
+                ) {
+                  event.preventDefault();
+                  navigate("/" + key);
+                }
+              }}
             >
-              <UsersRound size={18} aria-hidden />
-              Users
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => changeView("security")}
-            className={`sidebar-link ${view === "security" ? "active" : ""}`}
-            aria-current={view === "security" ? "page" : undefined}
-          >
-            <ShieldCheck size={18} aria-hidden />
-            Security
-          </button>
+              <Icon size={18} aria-hidden />
+              {label}
+            </a>
+          ))}
           <a
             className="sidebar-link"
             href="https://www.promdevs.com"
@@ -233,31 +299,50 @@ function Dashboard({
           {busy ? "Signing out…" : "Sign out"}
         </button>
       </aside>
-      <main id="workspace-main" className="workspace-main">
+      <main id="workspace-main" tabIndex={-1} className="workspace-main">
         <header className="workspace-top">
           <span className="eyebrow">
             PromDevs /{" "}
-            {view === "users"
-              ? "People"
-              : view === "security"
-                ? "Security"
-                : "Portfolio"}
+            {view === "projects"
+              ? "Portfolio"
+              : view[0].toUpperCase() + view.slice(1)}
           </span>
           <span className="private-label">Private workspace</span>
         </header>
         <p className="feedback error" role="alert">
           {error}
         </p>
-        {view === "users" ? (
+        {view === "users" && session.role === "owner" ? (
           <Users identity={session} onExpired={onLogout} />
         ) : view === "security" ? (
           <Security onExpired={onLogout} />
-        ) : (
+        ) : view === "projects" ? (
           <ProjectWorkspace
             identity={session}
+            selected={selected}
+            onNavigate={navigate}
             onExpired={onLogout}
-            onDirtyChange={setDirty}
+            onDirtyChange={updateDirty}
           />
+        ) : ["clients", "reviews", "skills", "contributors"].includes(view) ? (
+          <CatalogWorkspace
+            key={view}
+            kind={view as "clients" | "reviews" | "skills" | "contributors"}
+            identity={session}
+            selected={selected}
+            onNavigate={navigate}
+            onExpired={onLogout}
+            onDirtyChange={updateDirty}
+          />
+        ) : (
+          <section className="empty-state">
+            <h1>
+              {view === "users" ? "Owner access required." : "Page not found."}
+            </h1>
+            <Button onClick={() => navigate("/projects")}>
+              Back to projects
+            </Button>
+          </section>
         )}
         <footer className="workspace-footer">
           <span>PromDevs studio</span>

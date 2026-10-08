@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   Archive,
   Plus,
   RotateCw,
   Search,
+  Pencil,
   Undo2,
 } from "lucide-react";
 import {
@@ -15,72 +16,38 @@ import {
 import { Button } from "@promdevs/ui";
 import { api, ApiError } from "./api";
 import { ProjectEditor } from "./ProjectEditor";
-const route = () =>
-  /^#projects\/(new|[1-9]\d*)$/.exec(location.hash)?.[1] ?? null;
+import { ProjectThumbnail } from "./ProjectThumbnail";
 export function ProjectWorkspace({
   identity,
+  selected,
+  onNavigate,
   onExpired,
   onDirtyChange,
 }: {
   identity: AdminIdentity;
+  selected: string | null;
+  onNavigate: (path: string, replace?: boolean) => void;
   onExpired: (notice?: string) => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
-  const [selected, setSelected] = useState<string | null>(route);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [total, setTotal] = useState(0);
   const [query, setQuery] = useState("");
   const [state, setState] = useState("all");
   const [offset, setOffset] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [reload, setReload] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState<number | null>(null);
-  const dirty = useRef(false);
-  const current = useRef(selected);
-  const updateDirty = useCallback(
-    (value: boolean) => {
-      dirty.current = value;
-      onDirtyChange(value);
-    },
-    [onDirtyChange],
-  );
-  useEffect(() => {
-    function changed() {
-      const next = route();
-      if (next === current.current) return;
-      if (
-        dirty.current &&
-        !window.confirm("Discard unsaved project changes?")
-      ) {
-        history.replaceState(
-          null,
-          "",
-          current.current
-            ? `#projects/${current.current}`
-            : location.pathname + location.search,
-        );
-        return;
-      }
-      dirty.current = false;
-      onDirtyChange(false);
-      current.current = next;
-      setSelected(next);
-    }
-    window.addEventListener("hashchange", changed);
-    return () => {
-      window.removeEventListener("hashchange", changed);
-      onDirtyChange(false);
-    };
-  }, [onDirtyChange]);
   useEffect(() => {
     if (selected) return;
     const controller = new AbortController();
     setLoading(true);
     const timer = setTimeout(() => {
       void api(
-        `/portfolio/projects?${new URLSearchParams({ q: query, state, offset: String(offset), limit: "20" })}`,
+        `/portfolio/projects?${new URLSearchParams({ q: query, state, offset: String(offset), limit: String(pageSize) })}`,
         { signal: controller.signal },
       )
         .then((body) => {
@@ -88,6 +55,8 @@ export function ProjectWorkspace({
           const result = portfolioListSchema.parse(body);
           setProjects(result.projects);
           setTotal(result.total);
+          if (result.total && offset >= result.total)
+            setOffset(Math.floor((result.total - 1) / pageSize) * pageSize);
           setError("");
         })
         .catch((reason) => {
@@ -108,9 +77,9 @@ export function ProjectWorkspace({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, state, offset, reload, onExpired, selected]);
+  }, [query, state, offset, pageSize, reload, onExpired, selected]);
   const navigate = (value: string | null) => {
-    location.hash = value ? `projects/${value}` : "projects";
+    onNavigate(value ? `/projects/${value}` : "/projects");
   };
   async function changeState(project: ProjectSummary) {
     const next =
@@ -153,24 +122,23 @@ export function ProjectWorkspace({
         key={selected}
         id={selected === "new" ? null : Number(selected)}
         onExpired={onExpired}
-        onDirtyChange={updateDirty}
+        onDirtyChange={onDirtyChange}
         onClose={() => navigate(null)}
         onCreated={(id) => {
-          current.current = String(id);
-          history.replaceState(null, "", `#projects/${id}`);
-          setSelected(String(id));
+          onDirtyChange(false);
+          onNavigate(`/projects/${id}`, true);
         }}
       />
     );
   return (
-    <section aria-labelledby="projects-title">
+    <section className="catalog-page" aria-labelledby="projects-title">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">The work, in progress</p>
-          <h1 id="projects-title">Your projects.</h1>
-          <p className="muted">
-            Start with an idea. Shape the story as you go.
-          </p>
+          <p className="eyebrow">Portfolio</p>
+          <h1 id="projects-title">
+            Projects <span className="catalog-count">{total}</span>
+          </h1>
+          <p className="muted">Manage projects, drafts, and case studies.</p>
         </div>
         <Button onClick={() => navigate("new")}>
           <Plus size={18} aria-hidden />
@@ -183,6 +151,7 @@ export function ProjectWorkspace({
           <span className="sr-only">Search projects</span>
           <input
             type="search"
+            maxLength={160}
             placeholder="Find a project…"
             value={query}
             onChange={(e) => {
@@ -248,85 +217,187 @@ export function ProjectWorkspace({
           </Button>
         </div>
       ) : (
-        <div className="portfolio-list">
-          {projects.map((p) => (
-            <article className="portfolio-row" key={p.id}>
-              <div>
-                <span className={`account-status ${p.publicationStatus}`}>
-                  {p.publicationStatus}
-                </span>
-                <button
-                  className="project-title"
-                  onClick={() => navigate(String(p.id))}
-                >
-                  {p.title}
-                  <ArrowUpRight size={16} aria-hidden />
-                </button>
-                <p className="muted">
-                  {p.description || "The story is still taking shape."}
-                </p>
-                <div className="project-row-meta">
-                  <span>{p.status.replaceAll("_", " ")}</span>
-                  {p.year && <span>{p.year}</span>}
-                  {p.featured && <span>Featured</span>}
-                </div>
-              </div>
-              <div className="person-actions">
-                <Button
-                  className="secondary"
-                  onClick={() => navigate(String(p.id))}
-                >
-                  {p.publicationStatus === "draft"
-                    ? "Edit draft"
-                    : "View project"}
-                </Button>
-                {identity.role !== "editor" &&
-                  p.publicationStatus !== "published" && (
-                    <button
-                      className="compact-action"
-                      disabled={pending !== null}
-                      onClick={() => void changeState(p)}
-                    >
-                      {p.publicationStatus === "archived" ? (
-                        <Undo2 size={15} aria-hidden />
-                      ) : (
-                        <Archive size={15} aria-hidden />
-                      )}
-                      {p.publicationStatus === "archived"
-                        ? "Restore"
-                        : "Archive"}
-                    </button>
-                  )}
-              </div>
-            </article>
-          ))}
+        <div>
+          <p className="catalog-scroll-hint">
+            Scroll horizontally for details and actions.
+          </p>
+          <div
+            className="catalog-table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label="Scrollable records table"
+          >
+            <table className="catalog-table project-catalog">
+              <caption className="sr-only">
+                Projects matching your search and filters
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Project</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Visibility</th>
+                  <th scope="col">Updated</th>
+                  <th scope="col" className="actions-heading">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((p) => (
+                  <tr key={p.id}>
+                    <td className="catalog-name">
+                      <div className="catalog-name-layout">
+                        <ProjectThumbnail src={p.coverImage} />
+                        <div>
+                          <a
+                            className="catalog-title"
+                            href={`/projects/${p.id}`}
+                            title={p.title}
+                            onClick={(event) => {
+                              if (
+                                !event.ctrlKey &&
+                                !event.metaKey &&
+                                !event.shiftKey &&
+                                !event.altKey
+                              ) {
+                                event.preventDefault();
+                                navigate(String(p.id));
+                              }
+                            }}
+                          >
+                            {p.title}
+                            {p.featured && (
+                              <span
+                                className="featured-dot"
+                                title="Featured"
+                                aria-label="Featured"
+                              />
+                            )}
+                          </a>
+                          <span className="catalog-summary">
+                            {p.description || p.status.replaceAll("_", " ")}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="catalog-type">
+                      {p.productTypes
+                        .map(
+                          (v) =>
+                            ({
+                              web_app: "Web app",
+                              mobile_app: "Mobile app",
+                              ai_product: "AI product",
+                              website: "Website",
+                            })[v],
+                        )
+                        .join(", ") || "Not set"}
+                    </td>
+                    <td className="catalog-state">
+                      <span className={"account-status " + p.publicationStatus}>
+                        {p.publicationStatus}
+                      </span>
+                    </td>
+                    <td className="catalog-date">
+                      <time dateTime={p.updatedAt}>
+                        {new Intl.DateTimeFormat(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        }).format(new Date(p.updatedAt))}
+                      </time>
+                    </td>
+                    <td className="catalog-actions">
+                      <div>
+                        <button
+                          className="icon-button"
+                          title={
+                            p.publicationStatus === "draft"
+                              ? "Edit project"
+                              : "View project"
+                          }
+                          aria-label={
+                            (p.publicationStatus === "draft"
+                              ? "Edit "
+                              : "View ") + p.title
+                          }
+                          onClick={() => navigate(String(p.id))}
+                        >
+                          <Pencil size={16} aria-hidden />
+                        </button>
+                        {identity.role !== "editor" &&
+                          p.publicationStatus !== "published" && (
+                            <button
+                              className="icon-button"
+                              disabled={pending !== null}
+                              title={
+                                p.publicationStatus === "archived"
+                                  ? "Restore"
+                                  : "Archive"
+                              }
+                              aria-label={
+                                (p.publicationStatus === "archived"
+                                  ? "Restore "
+                                  : "Archive ") + p.title
+                              }
+                              onClick={() => void changeState(p)}
+                            >
+                              {p.publicationStatus === "archived" ? (
+                                <Undo2 size={16} aria-hidden />
+                              ) : (
+                                <Archive size={16} aria-hidden />
+                              )}
+                            </button>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-      <div className="people-pagination">
+      <div className="people-pagination catalog-pagination">
+        <label className="page-size">
+          Rows per page
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setOffset(0);
+            }}
+          >
+            {[20, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
         <Button
           className="secondary"
           disabled={!offset || loading}
-          onClick={() => setOffset((v) => Math.max(0, v - 20))}
+          onClick={() => setOffset((v) => Math.max(0, v - pageSize))}
         >
           Previous
         </Button>
         <span>
           {total
-            ? `${offset + 1}–${Math.min(offset + 20, total)} of ${total}`
+            ? `${offset + 1}–${Math.min(offset + pageSize, total)} of ${total}`
             : "0 projects"}
         </span>
         <Button
           className="secondary"
-          disabled={offset + 20 >= total || loading}
-          onClick={() => setOffset((v) => v + 20)}
+          disabled={offset + pageSize >= total || loading}
+          onClick={() => setOffset((v) => v + pageSize)}
         >
           Next
         </Button>
       </div>
       <p className="portfolio-note">
-        This release prepares projects in private. Publishing will be enabled
-        with the new public portfolio. Archiving keeps the record; it does not
-        delete R2 files.
+        Drafts are private. Archiving retains records and media. Publishing is
+        not enabled yet.
       </p>
     </section>
   );
