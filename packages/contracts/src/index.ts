@@ -210,3 +210,5 @@ export const adminIdentitySchema = z
 export type AdminIdentity = z.infer<typeof adminIdentitySchema>;
 
 export * from "./portfolio.js";
+
+export * from "./catalog.js";

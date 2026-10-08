@@ -119,3 +119,46 @@ may still trigger its deployment. See [Coolify instructions](../deploy/COOLIFY.m
 
 Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build` before deployment.
 Tests use isolated auth/store/storage fixtures, not production services.
+
+## Admin library screens
+
+The admin now uses clean, directly loadable URLs: `/projects`, `/clients`,
+`/reviews`, `/skills`, `/contributors`, `/users` (owner only), and `/security`.
+Each library also supports `/new` and `/:id`. Old `#projects/:id` links redirect
+on sign-in. Nginx's existing SPA fallback serves these deep links.
+
+Projects use a compact thumbnail table with search, visibility filtering and
+20/50/100-row pagination. The other libraries use the same list pattern.
+Changes are explicitly saved; leaving a dirty editor prompts for confirmation.
+
+The API endpoints are under `/api/admin/catalog/{clients,reviews,skills,contributors}`:
+
+- `GET /` accepts `q`, `state`, `limit` (1–100), and `offset`.
+- `GET /:id` returns the full authenticated record.
+- `POST /` creates a record (reviews are always drafts).
+- `PUT /:id` accepts `{ record, expectedUpdatedAt }` and rejects stale saves.
+- `POST /:id/state` archives/restores clients, contributors, and draft reviews.
+- `GET /api/admin/catalog/options` searches review relationships (`q`, optional
+  `clientId`/`projectId`). Each list is capped at 100; saved selections are included.
+
+All active roles can read and create records. Owners/admins manage existing
+clients, contributors, and skills, because these are shared across projects.
+Editors can edit draft reviews, but cannot archive or restore records. Every
+write rechecks the live account and version in SQL and records an atomic audit.
+
+Client contact information and notes remain internal. Client visibility on a
+project is still controlled by `show_client`. Review identity is independently
+controlled by `show_identity`, defaulting to false; reviews remain unpublished
+in this release. Selecting both a project and client requires matching ownership.
+Review text is plain text, not Markdown. Source/external-ID pairs are unique.
+
+Skills retain their imported integer IDs. Their category/icon can be edited;
+names and slugs are protected once linked to a project to avoid stale legacy
+technology labels. No hard deletion or skill archive column has been introduced.
+Clients/contributors use archiving to preserve existing relationships.
+Logo/avatar/icon fields accept public HTTP(S) URLs; these screens do not upload
+files or modify R2. Contributors are project people, not sign-in accounts.
+
+Deploy the API before the admin, since the new screens require these endpoints.
+No new migration, environment variable, dependency, or public-site change is
+required. Tests and preview fixtures do not access the live database or R2.

@@ -142,6 +142,30 @@ or delete project media automatically without checking reuse and CDN retention.
 
 Tests inject a fake transport; no real Cloudflare account is contacted.
 
+## Troubleshooting public image delivery
+
+`ERR_NAME_NOT_RESOLVED` means the browser could not resolve the public image
+hostname; it is not an upload validation or admin authentication error. Check
+the production bucket's **Settings > Custom Domains** and confirm the hostname
+is connected and its status is **Active**. Connect it through R2 in the same
+Cloudflare account as the domain's zone, rather than pointing it at Hetzner or
+the S3 API endpoint.
+
+Test the exact stored object URL, not just the domain root (R2 does not list
+objects at `/`). For example:
+
+```sh
+curl -I https://media.promdevs.com/images/projects/<object-id>.png
+```
+
+If that returns `200` but a browser still reports a DNS error, retry after DNS
+propagation and check another network or resolver. `pnpm storage:check` cannot
+diagnose this: it checks authenticated bucket access, not public delivery.
+Connecting the existing hostname fixes existing stored URLs without re-uploading
+files, provided the objects exist. Changing `R2_PUBLIC_BASE_URL` affects future
+uploads only; it does not rewrite previously stored URLs. The admin project list
+uses a fixed-size placeholder when a thumbnail cannot load.
+
 ## Official references
 
 - [R2 authentication and token scope](https://developers.cloudflare.com/r2/api/tokens/)

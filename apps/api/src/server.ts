@@ -5,6 +5,12 @@ import {
 } from "node:http";
 import { isIP } from "node:net";
 import {
+  CATALOG_ID_MAX,
+  catalogKinds,
+  catalogInputs,
+  catalogVersionSchema,
+  catalogQuerySchema,
+  catalogStateSchema,
   ADMIN_PASSWORD_MIN_LENGTH,
   contactSchema,
   loginSchema,
@@ -56,6 +62,8 @@ import {
 } from "./storage/project-media.js";
 import { StorageError } from "./storage/config.js";
 
+import { databaseCatalogStore, type CatalogStore } from "./catalog.js";
+
 type Options = {
   store: ProjectStore;
   authStore: AuthStore;
@@ -63,6 +71,7 @@ type Options = {
   invitationsStore?: InvitationsStore;
   invitationMailer?: InvitationMailer;
   portfolioStore?: PortfolioStore;
+  catalogStore?: CatalogStore;
   mediaUploader?: MediaUploader;
   sendEmail: (input: ContactInput) => Promise<unknown>;
   adminOrigin: string;
@@ -142,6 +151,7 @@ export function createApiServer(options: Options) {
     throw new Error("Production admin origin must use HTTPS");
   const accounts = new Accounts(options.accountsStore ?? databaseAccountsStore);
   const portfolio = options.portfolioStore ?? databasePortfolioStore;
+  const catalog = options.catalogStore ?? databaseCatalogStore;
   const media = options.mediaUploader ?? projectMediaUploader;
   let activeUploads = 0;
   const invitations = new Invitations(
@@ -402,6 +412,158 @@ export function createApiServer(options: Options) {
           return;
         }
         throw new HttpError(405, "Method not allowed.");
+      }
+      if (pathname.startsWith("/api/admin/catalog/")) {
+        const actor = await requireSession("content.read");
+        limited(`catalog-read:${actor.id}`, 120, 60000);
+        const parts = pathname.slice("/api/admin/catalog/".length).split("/");
+        const search = new URL(request.url || "/", "http://api.local")
+          .searchParams;
+        if ([...search.keys()].some((k) => search.getAll(k).length > 1))
+          throw new HttpError(400, "Invalid filters.");
+        if (parts[0] === "options" && parts.length === 1 && method === "GET") {
+          const q = search.get("q") || "";
+          const parseId = (key: string) => {
+            const value = search.get(key);
+            if (value === null) return undefined;
+            if (
+              !/^[1-9]\d*$/.test(value) ||
+              !Number.isSafeInteger(Number(value)) ||
+              Number(value) > CATALOG_ID_MAX
+            )
+              throw new HttpError(400, "Invalid selection.");
+            return Number(value);
+          };
+          if (
+            q.length > 160 ||
+            [...search.keys()].some(
+              (k) => !["q", "clientId", "projectId"].includes(k),
+            )
+          )
+            throw new HttpError(400, "Invalid filters.");
+          json(
+            response,
+            200,
+            await catalog.options(q, parseId("clientId"), parseId("projectId")),
+          );
+          return;
+        }
+        const kind = catalogKinds.find((k) => k === parts[0]);
+        if (!kind) throw new HttpError(404, "Page not found.");
+        const id =
+          parts[1] && /^[1-9]\d*$/.test(parts[1])
+            ? Number(parts[1])
+            : undefined;
+        if (
+          parts[1] &&
+          (!id || !Number.isSafeInteger(id) || id > CATALOG_ID_MAX)
+        )
+          throw new HttpError(400, "Invalid record ID.");
+        if (method === "GET" && parts.length === 1) {
+          const parsed = catalogQuerySchema.safeParse(
+            Object.fromEntries(search),
+          );
+          if (!parsed.success) throw new HttpError(400, "Invalid filters.");
+          json(response, 200, {
+            ...(await catalog.list(kind, parsed.data)),
+            limit: parsed.data.limit,
+            offset: parsed.data.offset,
+          });
+          return;
+        }
+        if (method === "GET" && id && parts.length === 2) {
+          const record = await catalog.get(kind, id);
+          if (!record) throw new HttpError(404, "Record not found.");
+          json(response, 200, { record });
+          return;
+        }
+        requireOrigin();
+        limited(`catalog-write:${actor.id}`, 30, 60000);
+        if (method === "POST" && parts.length === 1) {
+          if (!userHasPermission(actor, "content.create"))
+            throw new HttpError(403, "You cannot create records.");
+          const parsed = catalogInputs[kind].safeParse(await readJson(request));
+          if (!parsed.success)
+            throw new HttpError(
+              400,
+              parsed.error.issues[0]?.message || "Invalid input.",
+            );
+          json(response, 201, {
+            record: await catalog.save(actor, kind, parsed.data),
+          });
+          return;
+        }
+        if (method === "PUT" && id && parts.length === 2) {
+          if (kind !== "reviews" && actor.role === "editor")
+            throw new HttpError(
+              403,
+              "Owners and admins manage shared records. Editors can create and view them.",
+            );
+          const body = await readJson(request);
+          if (
+            typeof body !== "object" ||
+            !body ||
+            !("record" in body) ||
+            !("expectedUpdatedAt" in body) ||
+            Object.keys(body).some(
+              (k) => !["record", "expectedUpdatedAt"].includes(k),
+            )
+          )
+            throw new HttpError(400, "Invalid update.");
+          const parsed = catalogInputs[kind].safeParse(body.record);
+          const version = catalogVersionSchema.safeParse(
+            body.expectedUpdatedAt,
+          );
+          if (!parsed.success || !version.success)
+            throw new HttpError(
+              400,
+              !parsed.success
+                ? parsed.error.issues[0]?.message || "Invalid input."
+                : "Reload before saving.",
+            );
+          json(response, 200, {
+            record: await catalog.save(
+              actor,
+              kind,
+              parsed.data,
+              id,
+              version.data,
+            ),
+          });
+          return;
+        }
+        if (
+          method === "POST" &&
+          id &&
+          parts.length === 3 &&
+          parts[2] === "state"
+        ) {
+          if (actor.role === "editor")
+            throw new HttpError(
+              403,
+              "Only owners and admins can archive or restore records.",
+            );
+          const parsed = catalogStateSchema.safeParse(await readJson(request));
+          if (
+            !parsed.success ||
+            kind === "skills" ||
+            !["archived", kind === "reviews" ? "draft" : "active"].includes(
+              parsed.data.state,
+            )
+          )
+            throw new HttpError(400, "Invalid state change.");
+          json(response, 200, {
+            record: await catalog.state(
+              actor,
+              kind,
+              id,
+              parsed.data.state,
+              parsed.data.expectedUpdatedAt,
+            ),
+          });
+          return;
+        }
+        throw new HttpError(404, "Endpoint not found.");
       }
       if (
         pathname === "/api/admin/portfolio" ||
