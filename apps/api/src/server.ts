@@ -414,7 +414,7 @@ export function createApiServer(options: Options) {
         throw new HttpError(405, "Method not allowed.");
       }
       if (pathname.startsWith("/api/admin/catalog/")) {
-        const actor = await requireSession("content.read");
+        let actor = await requireSession("content.read");
         limited(`catalog-read:${actor.id}`, 120, 60000);
         const parts = pathname.slice("/api/admin/catalog/".length).split("/");
         const search = new URL(request.url || "/", "http://api.local")
@@ -450,6 +450,51 @@ export function createApiServer(options: Options) {
         }
         const kind = catalogKinds.find((k) => k === parts[0]);
         if (!kind) throw new HttpError(404, "Page not found.");
+        if (
+          method === "POST" &&
+          parts.length === 2 &&
+          parts[1] === "media" &&
+          (kind === "clients" || kind === "skills")
+        ) {
+          requireOrigin();
+          if (
+            !userHasPermission(actor, "media.upload") ||
+            !userHasPermission(actor, "content.create")
+          )
+            throw new HttpError(403, "You cannot upload images.");
+          limited(`catalog-upload:${actor.id}`, 10);
+          if (activeUploads >= 2) {
+            request.resume();
+            throw new HttpError(
+              503,
+              "Two uploads are already processing. Try again shortly.",
+            );
+          }
+          media.ready();
+          activeUploads++;
+          try {
+            const file = await receiveProjectMedia(request, true);
+            let uploaded: Awaited<ReturnType<MediaUploader["upload"]>>;
+            try {
+              uploaded = await media.upload(file, kind);
+              try {
+                actor = await requireSession("media.upload");
+                await catalog.auditUpload(actor, kind, uploaded.key);
+              } catch (error) {
+                await media
+                  .remove(uploaded.key)
+                  .catch(() => console.error("[api] Upload cleanup failed"));
+                throw error;
+              }
+            } finally {
+              await file.cleanup();
+            }
+            json(response, 201, { media: uploaded });
+          } finally {
+            activeUploads--;
+          }
+          return;
+        }
         const id =
           parts[1] && /^[1-9]\d*$/.test(parts[1])
             ? Number(parts[1])

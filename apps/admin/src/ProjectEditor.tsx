@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { MarkdownField, MarkdownHelp } from "./MarkdownField";
+import { slugFromName } from "./catalog-field-helpers";
 import { MediaUpload, type MediaFeedback } from "./MediaUpload";
 import {
   adminProjectResponseSchema,
@@ -132,6 +133,7 @@ export function ProjectEditor({
   const [quickJobTitle, setQuickJobTitle] = useState("");
   const [clientType, setClientType] = useState("organization");
   const [quickWebsite, setQuickWebsite] = useState("");
+  const [quickLinkedin, setQuickLinkedin] = useState("");
   const [teamChoice, setTeamChoice] = useState("");
   const [externalSrc, setExternalSrc] = useState("");
   const [externalType, setExternalType] = useState<"image" | "video">("image");
@@ -268,7 +270,11 @@ export function ProjectEditor({
                 jobTitle: quickJobTitle,
                 websiteUrl: quickWebsite,
               }
-            : { name: quickName },
+            : {
+                name: quickName,
+                websiteUrl: quickWebsite,
+                linkedinUrl: quickLinkedin,
+              },
         ),
       });
       setOptions(portfolioOptionsSchema.parse(await api("/portfolio/options")));
@@ -283,6 +289,7 @@ export function ProjectEditor({
       setPublicName("");
       setQuickJobTitle("");
       setQuickWebsite("");
+      setQuickLinkedin("");
       setNotice(
         "Record created and selected. Save the project to keep the relationship.",
       );
@@ -669,10 +676,30 @@ export function ProjectEditor({
               </div>
               <div className="field-pair">
                 {text("title", "Project title", { maxLength: 160 })}
-                {text("slug", "URL slug", {
-                  maxLength: 160,
-                  hint: "Optional for a draft. Lowercase words separated by hyphens.",
-                })}
+                <div className="field-with-action">
+                  {text("slug", "URL slug", {
+                    maxLength: 160,
+                    hint: "Optional for a draft. Lowercase words separated by hyphens.",
+                  })}
+                  <button
+                    type="button"
+                    className="field-action"
+                    disabled={!slugFromName(form.title)}
+                    onClick={() => {
+                      const slug = slugFromName(form.title);
+                      if (
+                        !form.slug ||
+                        form.slug === slug ||
+                        window.confirm(
+                          "Replace the existing slug with one generated from the project title?",
+                        )
+                      )
+                        set("slug", slug);
+                    }}
+                  >
+                    Generate from name
+                  </button>
+                </div>
               </div>
               {text("description", "Project summary", {
                 rows: 3,
@@ -789,6 +816,8 @@ export function ProjectEditor({
                 onClick={() => {
                   setQuick("clients");
                   setQuickName("");
+                  setQuickWebsite("");
+                  setQuickLinkedin("");
                 }}
               >
                 Create a client
@@ -1456,6 +1485,8 @@ export function ProjectEditor({
                   onClick={() => {
                     setQuick("contributors");
                     setQuickName("");
+                    setQuickWebsite("");
+                    setQuickLinkedin("");
                   }}
                 >
                   Create person
@@ -1471,6 +1502,28 @@ export function ProjectEditor({
                       onChange={(e) => setQuickName(e.target.value)}
                     />
                   </label>
+                  <label>
+                    Website / portfolio URL (optional)
+                    <input
+                      type="url"
+                      maxLength={2048}
+                      value={quickWebsite}
+                      onChange={(e) => setQuickWebsite(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    LinkedIn profile URL (optional)
+                    <input
+                      type="url"
+                      maxLength={2048}
+                      value={quickLinkedin}
+                      placeholder="https://www.linkedin.com/in/your-name"
+                      onChange={(e) => setQuickLinkedin(e.target.value)}
+                    />
+                  </label>
+                  <small className="muted">
+                    The website is used first; LinkedIn is the fallback.
+                  </small>
                   <div className="inline-actions">
                     <Button
                       type="button"

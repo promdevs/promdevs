@@ -86,6 +86,28 @@ const url = z
   .union([projectHttpUrl, z.literal(""), z.null()])
   .optional()
   .transform((v) => v || null);
+export const contributorLinksSchema = z.object({
+  websiteUrl: url,
+  linkedinUrl: url.refine((value) => {
+    if (!value) return true;
+    try {
+      const { hostname } = new URL(value);
+      return hostname === "linkedin.com" || hostname.endsWith(".linkedin.com");
+    } catch {
+      return false;
+    }
+  }, "Use a LinkedIn profile URL on linkedin.com"),
+});
+
+export function contributorProfileUrl(value: {
+  websiteUrl?: string | null;
+  linkedinUrl?: string | null;
+}): string | null {
+  const result = contributorLinksSchema.safeParse(value);
+  return result.success
+    ? result.data.websiteUrl || result.data.linkedinUrl || null
+    : null;
+}
 const image = z
   .union([
     projectHttpUrl,
@@ -300,7 +322,7 @@ export const quickClientInputSchema = z
   })
   .strict();
 export const quickContributorInputSchema = z
-  .object({ name: cleanName })
+  .object({ name: cleanName, ...contributorLinksSchema.shape })
   .strict();
 const reference = z.object({
   id: z.number().int().positive(),

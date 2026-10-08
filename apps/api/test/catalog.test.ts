@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { once } from "node:events";
 import { randomUUID } from "node:crypto";
-import { catalogInputs, catalogKinds } from "@promdevs/contracts";
+import {
+  catalogInputs,
+  catalogKinds,
+  contributorProfileUrl,
+  quickContributorInputSchema,
+} from "@promdevs/contracts";
 import { hashPassword } from "../src/auth.js";
 import { createApiServer } from "../src/server.js";
 import { catalogSaveSql, catalogStateSql } from "../src/catalog.js";
@@ -73,7 +78,11 @@ async function fixture(role: "owner" | "admin" | "editor" = "owner") {
 }
 const inputs = {
   clients: { name: "Private client", jobTitle: "Founder" },
-  contributors: { name: "Designer" },
+  contributors: {
+    name: "Designer",
+    websiteUrl: "https://designer.example.test",
+    linkedinUrl: "https://www.linkedin.com/in/designer",
+  },
   skills: { name: "TypeScript", slug: "typescript", category: "Frontend" },
   reviews: { body: "Very thoughtful work.", rating: 4.99 },
 };
@@ -84,7 +93,12 @@ for (const kind of catalogKinds)
       let r = await f.request("/" + kind, "POST", inputs[kind]);
       assert.equal(r.status, 201);
       let { record } = await r.json();
+      if (kind === "reviews") assert.equal(record.title, null);
       if (kind === "clients") assert.equal(record.jobTitle, "Founder");
+      if (kind === "contributors") {
+        assert.equal(record.websiteUrl, inputs.contributors.websiteUrl);
+        assert.equal(record.linkedinUrl, inputs.contributors.linkedinUrl);
+      }
       assert.equal(
         (await f.request("/" + kind + "?limit=20&offset=0")).status,
         200,
@@ -107,6 +121,10 @@ for (const kind of catalogKinds)
       );
       record = (await r.json()).record;
       if (kind === "clients") assert.equal(record.jobTitle, "Founder");
+      if (kind === "contributors") {
+        assert.equal(record.websiteUrl, inputs.contributors.websiteUrl);
+        assert.equal(record.linkedinUrl, inputs.contributors.linkedinUrl);
+      }
       if (kind !== "skills") {
         r = await f.request(`/${kind}/${record.id}/state`, "POST", {
           state: "archived",
@@ -177,6 +195,89 @@ test("client job titles are optional, trimmed, bounded, and editable independent
     const review = catalogInputs.reviews.parse({});
     assert.equal(review.authorRole, null);
     assert.equal(review.showIdentity, false);
+  } finally {
+    await f.close();
+  }
+});
+
+test("contributor links validate safely and prefer a website over LinkedIn", () => {
+  for (const schema of [
+    catalogInputs.contributors,
+    quickContributorInputSchema,
+  ]) {
+    const empty = schema.parse({ name: "Designer" });
+    assert.equal(empty.websiteUrl, null);
+    assert.equal(empty.linkedinUrl, null);
+    assert.equal(contributorProfileUrl(empty), null);
+    const both = schema.parse(inputs.contributors);
+    assert.equal(contributorProfileUrl(both), inputs.contributors.websiteUrl);
+    const linkedinOnly = schema.parse({
+      name: "Designer",
+      websiteUrl: "",
+      linkedinUrl: "  https://www.linkedin.com/in/designer  ",
+    });
+    assert.equal(
+      contributorProfileUrl(linkedinOnly),
+      inputs.contributors.linkedinUrl,
+    );
+    assert.equal(
+      schema.parse({ name: "Designer", websiteUrl: null, linkedinUrl: "" })
+        .linkedinUrl,
+      null,
+    );
+    for (const websiteUrl of [
+      "javascript:alert(1)",
+      "https://user:secret@example.test",
+      "not a url",
+      "https://example.test/" + "x".repeat(2048),
+    ])
+      assert.equal(
+        schema.safeParse({ name: "Designer", websiteUrl }).success,
+        false,
+      );
+    for (const linkedinUrl of [
+      "https://linkedin.com.evil.test/in/name",
+      "https://evil.test/linkedin.com",
+      "javascript:alert(1)",
+    ])
+      assert.equal(
+        schema.safeParse({ name: "Designer", linkedinUrl }).success,
+        false,
+      );
+  }
+  assert.equal(
+    contributorProfileUrl({ websiteUrl: "javascript:alert(1)" }),
+    null,
+  );
+});
+
+test("contributor profile links can be cleared and switched without changing identity", async () => {
+  const f = await fixture();
+  try {
+    const created = await f.request(
+      "/contributors",
+      "POST",
+      inputs.contributors,
+    );
+    assert.equal(created.status, 201);
+    let { record } = await created.json();
+    for (const links of [
+      { websiteUrl: "", linkedinUrl: inputs.contributors.linkedinUrl },
+      { websiteUrl: null, linkedinUrl: "" },
+    ]) {
+      const updated = await f.request(`/contributors/${record.id}`, "PUT", {
+        record: { name: inputs.contributors.name, ...links },
+        expectedUpdatedAt: record.updatedAt,
+      });
+      assert.equal(updated.status, 200);
+      record = (await updated.json()).record;
+      const fetched = await f.request(`/contributors/${record.id}`);
+      assert.equal(fetched.status, 200);
+      assert.deepEqual((await fetched.json()).record, record);
+      assert.equal(record.websiteUrl, null);
+      assert.equal(record.linkedinUrl, links.linkedinUrl || null);
+      assert.equal(contributorProfileUrl(record), links.linkedinUrl || null);
+    }
   } finally {
     await f.close();
   }

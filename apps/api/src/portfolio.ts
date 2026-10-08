@@ -255,7 +255,7 @@ export const databasePortfolioStore: PortfolioStore = {
             "industry",
             "website_url",
           ]
-        : ["name"];
+        : ["name", "website_url", "linkedin_url"];
     const values =
       kind === "clients"
         ? [
@@ -266,7 +266,7 @@ export const databasePortfolioStore: PortfolioStore = {
             input.industry,
             input.websiteUrl,
           ]
-        : [input.name];
+        : [input.name, input.websiteUrl, input.linkedinUrl];
     const [row] = await query().query(
       `WITH ${actorCte},created AS(INSERT INTO ${kind} (${cols.join(",")}) SELECT ${values.map((_, i) => `$${i + 3}::text`).join(",")} WHERE EXISTS(SELECT 1 FROM actor WHERE role IN ('owner','admin','editor')) RETURNING id),
       audited AS(INSERT INTO admin_audit_logs(actor_id,action,target_type,target_id) SELECT $1::uuid,'${kind === "clients" ? "client" : "contributor"}.created','${kind === "clients" ? "client" : "contributor"}',id::text FROM created) SELECT id FROM created`,

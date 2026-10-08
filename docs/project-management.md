@@ -179,3 +179,42 @@ pnpm db:migrate
 
 Then deploy the API before the admin. Migration generation is offline; no live
 migration is applied automatically by this change.
+
+### Contributor profile links
+
+Contributors have optional `websiteUrl` and `linkedinUrl` fields, stored as
+nullable `website_url` and `linkedin_url` columns. Both full catalog forms and
+project quick-create support these fields. Links must be HTTP(S) URLs without
+credentials (maximum 2,048 characters); the LinkedIn field additionally requires
+`linkedin.com` or a genuine subdomain. Neither link is required.
+
+The shared `contributorProfileUrl` resolver prefers the website, then LinkedIn,
+and returns `null` if neither is supplied. The contributor editor's **Open profile**
+preview uses this rule. No third link/preference column is stored. Public project
+attribution remains unwired, and private contact details remain private.
+
+Apply the generated `contributor_profile_links` migration with `pnpm db:migrate`
+before deploying the API, then the admin. Generation does not apply it to a live
+database. Existing contributors keep both fields as `null` until edited.
+
+### Catalog editing helpers
+
+- Client logos and skill icons accept uploads or manually entered URLs; see
+  [storage setup](storage.md#client-images-and-skill-icons). Client/skill lists
+  include fixed-size image thumbnails with a failed-image fallback.
+- **Use internal name** copies the client name into the private contact-person
+  field on request, confirming before replacing a value. It never guesses or
+  changes email/phone details.
+- **Fill from client** populates review author name, role, organization, and image
+  from the selected client on request. Organizations use the contact person's
+  name when available; individuals prefer the public display name. Internal names
+  may be used as a fallback, so inspect attribution before displaying it. Existing
+  author details require confirmation before replacement. Neither `showIdentity`
+  nor publication state changes, and email/phone/notes are never copied.
+- Review titles are explicitly optional and may stay blank.
+- **Generate from name** fills a skill slug from its name or a project slug from
+  its title. It normalizes punctuation/accents and confirms before replacing a
+  custom slug. Uniqueness and linked-skill rename restrictions still apply on save.
+
+All helpers change only the unsaved form; saving remains explicit. Public website
+rendering and backend publication controls are unchanged.

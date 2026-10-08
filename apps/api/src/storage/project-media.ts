@@ -12,7 +12,7 @@ import {
 import { HttpError } from "../errors.js";
 import { getR2Storage } from "./r2.js";
 import { readR2Config, StorageError } from "./config.js";
-import { validateImage } from "./policy.js";
+import { validateImage, type MediaScope } from "./policy.js";
 
 export type TempMedia = {
   path: string;
@@ -23,7 +23,7 @@ export type TempMedia = {
 };
 export type MediaUploader = {
   ready: () => void;
-  upload: (file: TempMedia) => Promise<ProjectUpload>;
+  upload: (file: TempMedia, scope?: MediaScope) => Promise<ProjectUpload>;
   remove: (key: string) => Promise<void>;
 };
 const types: Record<string, "image" | "video"> = {
@@ -35,16 +35,19 @@ const types: Record<string, "image" | "video"> = {
 };
 export async function receiveProjectMedia(
   request: IncomingMessage,
+  imagesOnly = false,
 ): Promise<TempMedia> {
   const contentType = String(request.headers["content-type"] || "").split(
     ";",
   )[0];
   const type = types[contentType];
-  if (!type) {
+  if (!type || (imagesOnly && type !== "image")) {
     request.resume();
     throw new HttpError(
       415,
-      "Upload JPEG, PNG, WebP, MP4, or WebM bytes directly.",
+      imagesOnly
+        ? "Upload JPEG, PNG, or WebP image bytes directly."
+        : "Upload JPEG, PNG, WebP, MP4, or WebM bytes directly.",
     );
   }
   const max =
@@ -191,10 +194,12 @@ export const projectMediaUploader: MediaUploader = {
     if (!config?.publicBaseUrl)
       throw new StorageError(
         "configuration",
-        "Configure R2 and R2_PUBLIC_BASE_URL before uploading project media.",
+        "Configure R2 and R2_PUBLIC_BASE_URL before uploading media.",
       );
   },
-  async upload(file) {
+  async upload(file, scope = "projects") {
+    if (scope !== "projects" && file.type !== "image")
+      throw new HttpError(415, "Only images are supported for this upload.");
     if (file.type === "image")
       validateImage(await readFile(file.path), file.contentType);
     else {
@@ -223,7 +228,7 @@ export const projectMediaUploader: MediaUploader = {
       const result =
         file.type === "image"
           ? await storage.uploadImage({
-              scope: "projects",
+              scope,
               body: await readFile(file.path),
               contentType: file.contentType,
             })

@@ -78,4 +78,17 @@ export const mediaGuidance = {
     formats: "JPEG, PNG or WebP · up to 10 MiB",
     accept: "image/jpeg,image/png,image/webp",
   },
+  client: {
+    title: "Upload client image",
+    recommendation: "Recommended: square 1:1 · 512 × 512 px",
+    formats: "JPEG, PNG or WebP · up to 10 MiB",
+    accept: "image/jpeg,image/png,image/webp",
+  },
+  skill: {
+    title: "Upload skill icon",
+    recommendation:
+      "Recommended: square 1:1 · 256 × 256 px, transparent PNG/WebP",
+    formats: "JPEG, PNG or WebP · up to 10 MiB · SVG is not supported",
+    accept: "image/jpeg,image/png,image/webp",
+  },
 } as const;
