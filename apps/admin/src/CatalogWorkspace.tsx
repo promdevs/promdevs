@@ -5,6 +5,7 @@ import { Button } from "@promdevs/ui";
 import { api, ApiError } from "./api";
 import { catalogTitles } from "./catalog-fields";
 import { CatalogEditor } from "./CatalogEditor";
+import { ProjectThumbnail } from "./ProjectThumbnail";
 import type { CatalogPageProps } from "./catalog-fields";
 const message = (e: unknown) =>
   e instanceof Error ? e.message : "Could not complete this request.";
@@ -225,29 +226,36 @@ export function CatalogWorkspace(
                 {records.map((r) => (
                   <tr key={r.id}>
                     <td>
-                      <a
-                        className="catalog-title"
-                        href={`/${kind}/${r.id}`}
-                        onClick={(e) => {
-                          if (
-                            !e.ctrlKey &&
-                            !e.metaKey &&
-                            !e.shiftKey &&
-                            !e.altKey
-                          ) {
-                            e.preventDefault();
-                            onNavigate(`/${kind}/${r.id}`);
-                          }
-                        }}
-                      >
-                        {r.name}
-                      </a>
-                      {kind !== "reviews" && (
-                        <span className="catalog-summary">
-                          {r.references} linked{" "}
-                          {kind === "clients" ? "records" : "projects"}
-                        </span>
-                      )}
+                      <div className="catalog-name-layout">
+                        {(kind === "clients" || kind === "skills") && (
+                          <ProjectThumbnail src={r.imageUrl} contain />
+                        )}
+                        <div>
+                          <a
+                            className="catalog-title"
+                            href={`/${kind}/${r.id}`}
+                            onClick={(e) => {
+                              if (
+                                !e.ctrlKey &&
+                                !e.metaKey &&
+                                !e.shiftKey &&
+                                !e.altKey
+                              ) {
+                                e.preventDefault();
+                                onNavigate(`/${kind}/${r.id}`);
+                              }
+                            }}
+                          >
+                            {r.name}
+                          </a>
+                          {kind !== "reviews" && (
+                            <span className="catalog-summary">
+                              {r.references} linked{" "}
+                              {kind === "clients" ? "records" : "projects"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="catalog-type">{r.detail || "—"}</td>
                     <td>

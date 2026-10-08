@@ -64,6 +64,7 @@ export class MemoryCatalog implements CatalogStore {
                 : "active",
           updatedAt: r.updatedAt,
           references: kind === "skills" && this.linkedSkills.has(r.id) ? 1 : 0,
+          imageUrl: "logo" in r ? r.logo : "iconUrl" in r ? r.iconUrl : null,
         };
       })
       .filter(
@@ -76,6 +77,14 @@ export class MemoryCatalog implements CatalogStore {
   async get(kind: CatalogKind, id: number) {
     const record = this.rows[kind].get(id);
     return record ? structuredClone(record) : null;
+  }
+  async auditUpload(
+    actor: AuthIdentity,
+    kind: "clients" | "skills",
+    key: string,
+  ) {
+    this.authorized(actor);
+    this.audits.push(`${kind}.media_uploaded:${key}`);
   }
   async save(
     actor: AuthIdentity,

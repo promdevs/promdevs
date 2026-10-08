@@ -71,7 +71,7 @@ export const catalogFields: Record<CatalogKind, Field[]> = {
     field("websiteUrl", "Website URL", "Identity", { type: "url" }),
     field("logo", "Logo URL", "Identity", {
       type: "url",
-      help: "Use a public image URL, ideally a square logo. No file is uploaded here.",
+      help: "Paste a public image URL, or use the image uploader below. Square logos or portraits work best.",
     }),
     field("contactName", "Contact person", "Private contact"),
     field("contactEmail", "Contact email", "Private contact", {
@@ -85,6 +85,14 @@ export const catalogFields: Record<CatalogKind, Field[]> = {
   ],
   contributors: [
     field("name", "Name", "Contributor", { required: true }),
+    field("websiteUrl", "Website / portfolio URL", "Contributor", {
+      type: "url",
+      help: "Optional public HTTP(S) URL. Used as the profile link before LinkedIn when both are provided.",
+    }),
+    field("linkedinUrl", "LinkedIn profile URL", "Contributor", {
+      type: "url",
+      help: "Optional linkedin.com profile URL. Used when no website is provided.",
+    }),
     field("contactEmail", "Contact email", "Contributor", { type: "email" }),
     field("notes", "Internal notes", "Contributor", {
       type: "textarea",
@@ -103,11 +111,13 @@ export const catalogFields: Record<CatalogKind, Field[]> = {
     }),
     field("iconUrl", "Icon URL", "Skill", {
       type: "url",
-      help: "Public HTTP(S) image URL. Existing imported icons are retained.",
+      help: "Paste a public image URL, or upload an icon below. Existing imported icons are retained.",
     }),
   ],
   reviews: [
-    field("title", "Review title", "Feedback"),
+    field("title", "Review title (optional)", "Feedback", {
+      help: "Leave blank if you prefer. A title is not required to save a review.",
+    }),
     field("body", "Review text", "Feedback", {
       type: "textarea",
       max: 16000,
@@ -119,7 +129,7 @@ export const catalogFields: Record<CatalogKind, Field[]> = {
     }),
     field("reviewedAt", "Review date", "Feedback", { type: "date" }),
     field("authorName", "Author name", "Identity", {
-      help: "Required only when showing identity. Never automatically copied from private contact details.",
+      help: "Required only when showing identity. Enter it yourself or explicitly fill from the client, then review before publishing.",
     }),
     field("authorRole", "Author role", "Identity"),
     field("authorCompany", "Author company", "Identity"),

@@ -1863,6 +1863,9 @@ td:last-child {
   height: 100%;
   object-fit: cover;
 }
+.catalog-thumbnail.is-contained img {
+  object-fit: contain;
+}
 .catalog-title {
   display: flex;
   align-items: center;
@@ -2023,6 +2026,73 @@ td:last-child {
   font-size: 12px;
   line-height: 1.65;
   font-weight: 400;
+}
+
+.field-action {
+  display: inline-block;
+  width: fit-content;
+  min-height: 44px;
+  margin-top: 3px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent, #2563eb);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.field-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.field-action:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.catalog-autofill {
+  margin-bottom: 18px;
+  max-width: 640px;
+}
+.catalog-autofill .field-help {
+  display: block;
+}
+.catalog-form-grid > div,
+.field-with-action {
+  min-width: 0;
+}
+.catalog-image-upload {
+  margin: 24px 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.catalog-image-upload h2 {
+  font-size: 16px;
+  margin-bottom: 14px;
+}
+.catalog-image-preview,
+.catalog-upload-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.catalog-image-preview .catalog-thumbnail {
+  flex-basis: 48px;
+  width: 48px;
+  height: 48px;
+}
+.catalog-image-preview img {
+  object-fit: contain;
+}
+.catalog-image-upload .field-help {
+  display: block;
+  margin-top: 12px;
+}
+.catalog-upload-status {
+  flex-wrap: wrap;
+  font-size: 13px;
 }
 .catalog-save {
   display: flex;

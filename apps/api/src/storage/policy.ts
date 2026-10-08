@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { StorageError } from "./config.js";
 
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-export const mediaScopes = ["projects", "clients", "reviews"] as const;
+export const mediaScopes = [
+  "projects",
+  "clients",
+  "reviews",
+  "skills",
+] as const;
 export type MediaScope = (typeof mediaScopes)[number];
 export type ImageContentType = "image/jpeg" | "image/png" | "image/webp";
 
@@ -72,7 +77,7 @@ export function createImageKey(
 
 export function assertImageKey(key: string): void {
   if (
-    !/^images\/(projects|clients|reviews)\/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.(jpg|png|webp)$/.test(
+    !/^images\/(projects|clients|reviews|skills)\/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\.(jpg|png|webp)$/.test(
       key,
     )
   ) {

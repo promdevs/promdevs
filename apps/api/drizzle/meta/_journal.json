@@ -43,6 +43,13 @@
       "when": 1791420134478,
       "tag": "0005_client_job_title",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791423028023,
+      "tag": "0006_contributor_profile_links",
+      "breakpoints": true
     }
   ]
 }

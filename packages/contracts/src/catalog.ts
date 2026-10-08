@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { projectHttpUrl } from "./portfolio.js";
+import { contributorLinksSchema, projectHttpUrl } from "./portfolio.js";
 
 export const catalogKinds = [
   "clients",
@@ -55,7 +55,12 @@ export const catalogInputs = {
     })
     .strict(),
   contributors: z
-    .object({ name, contactEmail: email, notes: optionalText(10000) })
+    .object({
+      name,
+      contactEmail: email,
+      ...contributorLinksSchema.shape,
+      notes: optionalText(10000),
+    })
     .strict(),
   skills: z
     .object({
@@ -142,6 +147,7 @@ export const catalogSummarySchema = z.object({
   state: z.string(),
   updatedAt: catalogVersionSchema,
   references: z.number().int().nonnegative(),
+  imageUrl: url,
 });
 export const catalogListSchema = z.object({
   records: z.array(catalogSummarySchema),

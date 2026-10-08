@@ -33,3 +33,19 @@ test("client form exposes an optional job title", () => {
   assert.equal(field.max, 160);
   assert.equal(initialCatalogForm("clients").jobTitle, "");
 });
+
+test("contributor form exposes optional website and LinkedIn URLs", () => {
+  const form = initialCatalogForm("contributors");
+  for (const key of ["websiteUrl", "linkedinUrl"]) {
+    const field = catalogFields.contributors.find((f) => f.key === key);
+    assert.ok(field);
+    assert.equal(field.type, "url");
+    assert.equal(field.required, undefined);
+    assert.equal(form[key], "");
+  }
+  assert.equal(catalogInputs.contributors.safeParse(form).success, false);
+  assert.equal(
+    catalogInputs.contributors.safeParse({ ...form, name: "Designer" }).success,
+    true,
+  );
+});

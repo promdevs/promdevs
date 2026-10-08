@@ -11,7 +11,7 @@ server {
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https: blob:; media-src 'self' https: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'" always;
 
     location = /health { access_log off; return 200 "ok"; }
-    location ~ ^/api/admin/portfolio/projects/[1-9][0-9]*/media$ {
+    location ~ ^/api/admin/(portfolio/projects/[1-9][0-9]*|catalog/(clients|skills))/media$ {
         client_max_body_size 50m;
         client_body_timeout 180s;
         proxy_request_buffering off;

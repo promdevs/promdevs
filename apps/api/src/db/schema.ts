@@ -382,6 +382,8 @@ export const contributors = pgTable(
     id: serial("id").primaryKey(),
     name: text("name").notNull(),
     contactEmail: text("contact_email"),
+    websiteUrl: text("website_url"),
+    linkedinUrl: text("linkedin_url"),
     notes: text("notes"),
     status: text("status").$type<RecordStatus>().notNull().default("active"),
     ...auditColumns(),

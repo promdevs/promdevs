@@ -305,6 +305,22 @@ test("without a media domain, helpers return no public URL or public cache direc
   );
 });
 
+test("skill icons use a distinct managed image scope with immutable keys", async () => {
+  const fake = mockTransport();
+  const storage = createR2Storage(config, fake.transport);
+  const image = await storage.uploadImage({
+    scope: "skills",
+    body: png,
+    contentType: "image/png",
+  });
+  assert.match(image.key, /^images\/skills\//);
+  assert.equal(image.url, config.publicBaseUrl + "/" + image.key);
+  assertImageKey(image.key);
+  await storage.deleteImage(image.key);
+  assert.equal((fake.commands[1] as DeleteObjectCommand).input.Key, image.key);
+  storage.destroy();
+});
+
 test("inspect and deletion are restricted to managed keys and the configured bucket", async () => {
   const fake = mockTransport();
   const storage = createR2Storage(config, fake.transport);

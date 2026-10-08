@@ -7,7 +7,7 @@ function CoverImage({ src }: { src: string }) {
   if (failed)
     return (
       <FolderOpen size={20} aria-hidden>
-        <title>Cover image unavailable</title>
+        <title>Image unavailable</title>
       </FolderOpen>
     );
 
@@ -16,9 +16,15 @@ function CoverImage({ src }: { src: string }) {
   );
 }
 
-export function ProjectThumbnail({ src }: { src: string | null }) {
+export function ProjectThumbnail({
+  src,
+  contain = false,
+}: {
+  src: string | null;
+  contain?: boolean;
+}) {
   return (
-    <span className="catalog-thumbnail">
+    <span className={`catalog-thumbnail${contain ? " is-contained" : ""}`}>
       {src ? (
         <CoverImage key={src} src={src} />
       ) : (

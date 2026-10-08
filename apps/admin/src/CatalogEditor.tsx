@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft } from "lucide-react";
 import {
   catalogInputs,
+  contributorProfileUrl,
   catalogRecordSchemas,
   reviewOptionsSchema,
   type CatalogRecord,
@@ -16,6 +17,8 @@ import {
   type CatalogForm,
 } from "./catalog-fields";
 import type { CatalogPageProps } from "./catalog-fields";
+import { CatalogImageUpload } from "./CatalogImageUpload";
+import { clientReviewIdentity, slugFromName } from "./catalog-field-helpers";
 const message = (e: unknown) =>
   e instanceof Error ? e.message : "Could not complete this request.";
 export function CatalogEditor({
@@ -44,7 +47,19 @@ export function CatalogEditor({
   });
   const [lookupError, setLookupError] = useState("");
   const [lookupLoading, setLookupLoading] = useState(kind === "reviews");
+  const [uploading, setUploading] = useState(false);
+  const [autofilling, setAutofilling] = useState(false);
+  const autofillRequest = useRef<AbortController | null>(null);
+  useEffect(() => () => autofillRequest.current?.abort(), []);
+  const working = busy || uploading || autofilling;
   const dirty = JSON.stringify(form) !== baseline;
+  const profileUrl =
+    kind === "contributors"
+      ? contributorProfileUrl({
+          websiteUrl: String(form.websiteUrl || ""),
+          linkedinUrl: String(form.linkedinUrl || ""),
+        })
+      : null;
   const readonly =
     !!id &&
     (kind === "reviews"
@@ -53,9 +68,9 @@ export function CatalogEditor({
         record.publicationStatus !== "draft"
       : identity.role === "editor");
   useEffect(() => {
-    onDirtyChange(dirty);
+    onDirtyChange(dirty || uploading);
     return () => onDirtyChange(false);
-  }, [dirty, onDirtyChange]);
+  }, [dirty, uploading, onDirtyChange]);
   useEffect(() => {
     if (!id) return;
     const controller = new AbortController();
@@ -123,9 +138,77 @@ export function CatalogEditor({
     setForm((v) => ({ ...v, [key]: value }));
     setNotice("");
   }
+  function useInternalName() {
+    const name = String(form.name || "").trim();
+    if (!name || working || readonly) return;
+    if (
+      form.contactName &&
+      form.contactName !== name &&
+      !window.confirm(
+        "Replace the contact person's name with the internal client name?",
+      )
+    )
+      return;
+    change("contactName", name);
+    setNotice(
+      "Internal client name copied. Email and phone have not been changed.",
+    );
+  }
+  function generateSlug() {
+    const slug = slugFromName(String(form.name || ""));
+    if (!slug || working || readonly) return;
+    if (
+      form.slug &&
+      form.slug !== slug &&
+      !window.confirm(
+        "Replace the existing slug with one generated from the name?",
+      )
+    )
+      return;
+    change("slug", slug);
+  }
+  async function useClientIdentity() {
+    if (!form.clientId || working || readonly) return;
+    if (
+      ["authorName", "authorRole", "authorCompany", "authorAvatar"].some(
+        (key) => !!form[key],
+      ) &&
+      !window.confirm(
+        "Replace the current review author details with the selected client's information?",
+      )
+    )
+      return;
+    const clientId = form.clientId;
+    const controller = new AbortController();
+    autofillRequest.current = controller;
+    setAutofilling(true);
+    setError("");
+    try {
+      const result = await api<{ record: unknown }>(
+        `/catalog/clients/${clientId}`,
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
+      const client = catalogRecordSchemas.clients.parse(result.record);
+      setForm((value) =>
+        value.clientId === clientId
+          ? { ...value, ...clientReviewIdentity(client) }
+          : value,
+      );
+      setNotice(
+        "Client identity copied. Show identity and review visibility are unchanged. Check the name and image before saving.",
+      );
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      if (error instanceof ApiError && error.status === 401) onExpired();
+      else setError(message(error));
+    } finally {
+      if (!controller.signal.aborted) setAutofilling(false);
+    }
+  }
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (busy || readonly) return;
+    if (working || readonly) return;
     setError("");
     setNotice("");
     const parsed = catalogInputs[kind].safeParse(form);
@@ -180,11 +263,11 @@ export function CatalogEditor({
     <section
       className="catalog-editor"
       aria-labelledby="record-title"
-      aria-busy={loading || busy}
+      aria-busy={loading || working}
     >
       <button
         className="text-link"
-        disabled={busy}
+        disabled={working}
         onClick={() => onNavigate(`/${kind}`)}
       >
         <ArrowLeft size={16} aria-hidden />
@@ -229,7 +312,7 @@ export function CatalogEditor({
                 : "Editors can create and view shared records. An owner or admin can update them."}
             </p>
           )}
-          <fieldset disabled={busy || !!readonly}>
+          <fieldset disabled={working || !!readonly}>
             {kind === "reviews" && (
               <section className="catalog-form-group">
                 <h2>Relationships</h2>
@@ -315,143 +398,201 @@ export function CatalogEditor({
               (group) => (
                 <section className="catalog-form-group" key={group}>
                   <h2>{group}</h2>
+                  {kind === "clients" && group === "Private contact" && (
+                    <div className="catalog-autofill">
+                      <button
+                        type="button"
+                        className="field-action"
+                        disabled={!String(form.name || "").trim()}
+                        onClick={useInternalName}
+                      >
+                        Use internal name
+                      </button>
+                      <small className="field-help">
+                        Copies the internal client name into Contact person.
+                        Email and phone stay unchanged.
+                      </small>
+                    </div>
+                  )}
+                  {kind === "reviews" && group === "Identity" && (
+                    <div className="catalog-autofill">
+                      <button
+                        type="button"
+                        className="field-action"
+                        disabled={!form.clientId}
+                        onClick={() => void useClientIdentity()}
+                      >
+                        Fill from client
+                      </button>
+                      <small className="field-help">
+                        Select a client above. Copies their name, role,
+                        organization and image, using contact/internal names if
+                        needed. Check these before showing identity; this action
+                        does not enable it.
+                      </small>
+                    </div>
+                  )}
                   <div className="catalog-form-grid">
                     {catalogFields[kind]
                       .filter((f) => f.group === group)
                       .map((f) => {
                         const helpId = `${kind}-${f.key}-help`;
                         return (
-                          <label
+                          <div
                             key={f.key}
                             className={
                               f.type === "textarea"
                                 ? "full-width"
                                 : f.type === "checkbox"
-                                  ? "check full-width"
+                                  ? "full-width"
                                   : ""
                             }
                           >
-                            {f.type === "checkbox" ? (
-                              <>
-                                <input
-                                  aria-label={f.label}
-                                  type="checkbox"
-                                  checked={!!form[f.key]}
-                                  onChange={(e) =>
-                                    change(f.key, e.target.checked)
-                                  }
-                                  aria-describedby={f.help ? helpId : undefined}
-                                />
-                                <span>
+                            <label
+                              className={
+                                f.type === "checkbox" ? "check" : undefined
+                              }
+                            >
+                              {f.type === "checkbox" ? (
+                                <>
+                                  <input
+                                    aria-label={f.label}
+                                    type="checkbox"
+                                    checked={!!form[f.key]}
+                                    onChange={(e) =>
+                                      change(f.key, e.target.checked)
+                                    }
+                                    aria-describedby={
+                                      f.help ? helpId : undefined
+                                    }
+                                  />
+                                  <span>
+                                    {f.label}
+                                    {f.help && (
+                                      <small id={helpId} className="field-help">
+                                        {f.help}
+                                      </small>
+                                    )}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
                                   {f.label}
+                                  {f.required && " *"}
+                                  {f.type === "textarea" ? (
+                                    <textarea
+                                      aria-label={f.label}
+                                      value={String(form[f.key] ?? "")}
+                                      rows={f.key === "body" ? 6 : 4}
+                                      maxLength={f.max}
+                                      onChange={(e) =>
+                                        change(f.key, e.target.value)
+                                      }
+                                      aria-describedby={
+                                        f.help ? helpId : undefined
+                                      }
+                                    />
+                                  ) : f.type === "select" ? (
+                                    <select
+                                      aria-label={f.label}
+                                      value={String(form[f.key] ?? "")}
+                                      onChange={(e) =>
+                                        change(f.key, e.target.value)
+                                      }
+                                    >
+                                      {f.options?.map((v) => (
+                                        <option key={v} value={v}>
+                                          {v}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      aria-label={f.label}
+                                      type={f.type || "text"}
+                                      required={f.required}
+                                      maxLength={
+                                        f.type === "url"
+                                          ? 2048
+                                          : ["externalId", "title"].includes(
+                                                f.key,
+                                              )
+                                            ? 200
+                                            : f.key === "contactEmail"
+                                              ? 320
+                                              : [
+                                                    "source",
+                                                    "contactPhone",
+                                                  ].includes(f.key)
+                                                ? 80
+                                                : 160
+                                      }
+                                      min={
+                                        f.key === "rating"
+                                          ? 1
+                                          : f.key === "sortOrder"
+                                            ? 0
+                                            : undefined
+                                      }
+                                      max={
+                                        f.key === "rating"
+                                          ? 5
+                                          : f.key === "sortOrder"
+                                            ? 1000000
+                                            : undefined
+                                      }
+                                      step={f.key === "rating" ? 0.01 : 1}
+                                      value={
+                                        f.type === "date"
+                                          ? String(form[f.key] ?? "").slice(
+                                              0,
+                                              10,
+                                            )
+                                          : String(form[f.key] ?? "")
+                                      }
+                                      onChange={(e) =>
+                                        change(
+                                          f.key,
+                                          f.type === "number"
+                                            ? e.target.value === ""
+                                              ? null
+                                              : Number(e.target.value)
+                                            : f.type === "date"
+                                              ? e.target.value
+                                                ? new Date(
+                                                    e.target.value +
+                                                      "T00:00:00Z",
+                                                  ).toISOString()
+                                                : null
+                                              : e.target.value,
+                                        )
+                                      }
+                                      aria-describedby={
+                                        f.help ? helpId : undefined
+                                      }
+                                    />
+                                  )}
                                   {f.help && (
-                                    <small id={helpId} className="field-help">
+                                    <small className="field-help" id={helpId}>
                                       {f.help}
                                     </small>
                                   )}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                {f.label}
-                                {f.required && " *"}
-                                {f.type === "textarea" ? (
-                                  <textarea
-                                    aria-label={f.label}
-                                    value={String(form[f.key] ?? "")}
-                                    rows={f.key === "body" ? 6 : 4}
-                                    maxLength={f.max}
-                                    onChange={(e) =>
-                                      change(f.key, e.target.value)
-                                    }
-                                    aria-describedby={
-                                      f.help ? helpId : undefined
-                                    }
-                                  />
-                                ) : f.type === "select" ? (
-                                  <select
-                                    aria-label={f.label}
-                                    value={String(form[f.key] ?? "")}
-                                    onChange={(e) =>
-                                      change(f.key, e.target.value)
-                                    }
-                                  >
-                                    {f.options?.map((v) => (
-                                      <option key={v} value={v}>
-                                        {v}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <input
-                                    aria-label={f.label}
-                                    type={f.type || "text"}
-                                    required={f.required}
-                                    maxLength={
-                                      f.type === "url"
-                                        ? 2048
-                                        : ["externalId", "title"].includes(
-                                              f.key,
-                                            )
-                                          ? 200
-                                          : f.key === "contactEmail"
-                                            ? 320
-                                            : [
-                                                  "source",
-                                                  "contactPhone",
-                                                ].includes(f.key)
-                                              ? 80
-                                              : 160
-                                    }
-                                    min={
-                                      f.key === "rating"
-                                        ? 1
-                                        : f.key === "sortOrder"
-                                          ? 0
-                                          : undefined
-                                    }
-                                    max={
-                                      f.key === "rating"
-                                        ? 5
-                                        : f.key === "sortOrder"
-                                          ? 1000000
-                                          : undefined
-                                    }
-                                    step={f.key === "rating" ? 0.01 : 1}
-                                    value={
-                                      f.type === "date"
-                                        ? String(form[f.key] ?? "").slice(0, 10)
-                                        : String(form[f.key] ?? "")
-                                    }
-                                    onChange={(e) =>
-                                      change(
-                                        f.key,
-                                        f.type === "number"
-                                          ? e.target.value === ""
-                                            ? null
-                                            : Number(e.target.value)
-                                          : f.type === "date"
-                                            ? e.target.value
-                                              ? new Date(
-                                                  e.target.value + "T00:00:00Z",
-                                                ).toISOString()
-                                              : null
-                                            : e.target.value,
-                                      )
-                                    }
-                                    aria-describedby={
-                                      f.help ? helpId : undefined
-                                    }
-                                  />
-                                )}
-                                {f.help && (
-                                  <small className="field-help" id={helpId}>
-                                    {f.help}
-                                  </small>
-                                )}
-                              </>
+                                </>
+                              )}
+                            </label>
+                            {f.key === "slug" && (
+                              <button
+                                type="button"
+                                className="field-action"
+                                disabled={
+                                  !slugFromName(String(form.name || ""))
+                                }
+                                onClick={generateSlug}
+                              >
+                                Generate from name
+                              </button>
                             )}
-                          </label>
+                          </div>
                         );
                       })}
                   </div>
@@ -459,12 +600,37 @@ export function CatalogEditor({
               ),
             )}
           </fieldset>
+          {(kind === "clients" || kind === "skills") && (
+            <CatalogImageUpload
+              kind={kind}
+              src={
+                String(form[kind === "clients" ? "logo" : "iconUrl"] || "") ||
+                null
+              }
+              disabled={busy || autofilling || !!readonly}
+              onChange={(url) =>
+                change(kind === "clients" ? "logo" : "iconUrl", url)
+              }
+              onBusyChange={setUploading}
+              onExpired={onExpired}
+            />
+          )}
           <div className="catalog-save">
+            {profileUrl && (
+              <a
+                className="text-link"
+                href={profileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open profile ↗
+              </a>
+            )}
             <span className="muted">
               {dirty ? "Unsaved changes" : record ? "Saved" : "Not saved yet"}
             </span>
             {!readonly && (
-              <Button type="submit" disabled={busy}>
+              <Button type="submit" disabled={working}>
                 {busy
                   ? "Saving…"
                   : kind === "reviews"
@@ -475,7 +641,7 @@ export function CatalogEditor({
             <Button
               type="button"
               className="secondary"
-              disabled={busy}
+              disabled={working}
               onClick={() => onNavigate(`/${kind}`)}
             >
               Close
@@ -484,7 +650,7 @@ export function CatalogEditor({
               <Button
                 type="button"
                 className="secondary"
-                disabled={busy}
+                disabled={working}
                 onClick={() => {
                   if (
                     !dirty ||

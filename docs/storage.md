@@ -2,9 +2,9 @@
 
 ## Scope
 
-API-owned storage for project images and videos, plus helper support for client
-and review images. The admin project editor now exposes authenticated project
-uploads; the public website is unchanged. No database migration, media table,
+API-owned storage for project images and videos, client images, and skill icons,
+plus helper support for review images. The admin project and catalog editors
+expose authenticated uploads; the public website is unchanged. No media table,
 automatic uploads, bucket provisioning, or live mutations happen during setup.
 The API continues to start without R2; upload requests fail clearly when unconfigured.
 
@@ -125,7 +125,8 @@ Coolify watch paths may trigger all three deployments for this setup commit.
 - `publicUrl(key)`: derive a public URL, or return `null` without a public domain.
 - `destroy()`: release the client's sockets when its owner finishes or shuts down.
 
-Keys follow `images/<scope>/<uuid>.<extension>`; caller filenames and arbitrary
+Image scopes are `projects`, `clients`, `reviews`, and `skills`. Keys follow
+`images/<scope>/<uuid>.<extension>`; caller filenames and arbitrary
 object paths are not accepted. New objects use `If-None-Match: *`, so retries or
 collisions cannot overwrite existing media. Public uploads use immutable cache
 headers; updates create new keys rather than replacing the same file. A failed
@@ -141,6 +142,32 @@ and interrupted or abandoned edits can leave objects. Do not send files as JSON
 or delete project media automatically without checking reuse and CDN retention.
 
 Tests inject a fake transport; no real Cloudflare account is contacted.
+
+## Client images and skill icons
+
+The catalog editor supports JPEG/PNG/WebP uploads up to 10 MiB at
+`POST /api/admin/catalog/clients/media` and
+`POST /api/admin/catalog/skills/media`. Suggested dimensions are 512 × 512 for
+client logos/portraits and 256 × 256 for skill icons, preferably transparent
+PNG/WebP. SVG and video uploads are not accepted. Images are not cropped/resized.
+
+Uploads work before the record is saved; the result fills `logo` or `iconUrl` in
+the form. Save the record to attach it. Existing URLs still work. Uploaded files
+are public immediately, even if the form is cancelled. Unsaved/replaced images
+can be orphaned; clearing a URL does not delete R2 objects or invalidate caches.
+
+All authenticated content creators with media-upload permission can upload,
+including editors creating new records. Editors still cannot overwrite existing
+shared clients/skills. Each upload is authenticated, origin-checked, inspected,
+audited with a live authorization/version check, and limited to 10 per account
+per 10 minutes with at most two uploads in flight across project/catalog routes.
+The API cleans temporary files and attempts to remove a newly uploaded object if
+authorization/auditing fails after upload. Failed writes may still leave an object.
+
+Redeploy the API first, then the admin. The admin Nginx template now permits upload
+bodies/timeouts on these exact routes; otherwise its general 256 KiB limit would
+reject images. No new environment variables or database migration are needed for
+these usability changes (apply any separately pending schema migrations first).
 
 ## Troubleshooting public image delivery
 
