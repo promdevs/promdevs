@@ -294,6 +294,7 @@ export const quickClientInputSchema = z
     name: cleanName,
     clientType: z.enum(["individual", "organization"]).default("organization"),
     publicName: text(160),
+    jobTitle: text(160),
     industry: text(160),
     websiteUrl: url,
   })

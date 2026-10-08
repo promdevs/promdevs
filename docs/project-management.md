@@ -162,3 +162,20 @@ files or modify R2. Contributors are project people, not sign-in accounts.
 Deploy the API before the admin, since the new screens require these endpoints.
 No new migration, environment variable, dependency, or public-site change is
 required. Tests and preview fixtures do not access the live database or R2.
+
+### Client job titles
+
+Clients now accept an optional `jobTitle` in the admin catalog and quick-create
+API/form. It is stored as nullable `clients.job_title`; empty or whitespace-only
+values become `null`, with a 160-character API limit. For organizations, use the
+primary contact's role. This does not overwrite a review's `authorRole` or change
+review identity/publication controls, and adds no public-site rendering.
+
+Apply the generated `client_job_title` migration before deploying this API update:
+
+```sh
+pnpm db:migrate
+```
+
+Then deploy the API before the admin. Migration generation is offline; no live
+migration is applied automatically by this change.

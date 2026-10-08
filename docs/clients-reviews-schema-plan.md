@@ -30,9 +30,11 @@ selected for display. A featured flag controls placement, not authenticity.
 - [ ] `name` (required text): Internal name of the client/person or organization.
 - [ ] `client_type` (controlled value): Individual or organization.
 - [ ] `public_name` (optional text): Approved public name; never fall back to a private name automatically.
+- [x] `job_title` (optional text): Individual's role, or primary contact's role for an organization, such as Founder or Product Lead. Review attribution retains its separate `author_role`; do not expose the title for anonymous reviews.
 - [ ] `industry` (optional text): Industry context.
 - [ ] `website_url` (optional URL): Approved public website.
 - [ ] `logo` (optional file reference): Approved client logo; not the binary image.
+
 There is no global public-profile permission field or standalone client page.
 Client details appear only through project details and published reviews, with
 independent controls for each context. Internal contact information stays private.

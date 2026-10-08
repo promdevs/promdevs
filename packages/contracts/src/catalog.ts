@@ -44,6 +44,7 @@ export const catalogInputs = {
         .enum(["organization", "individual"])
         .default("organization"),
       publicName: optionalText(160),
+      jobTitle: optionalText(160),
       industry: optionalText(160),
       websiteUrl: url,
       logo: url,

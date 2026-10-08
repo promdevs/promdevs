@@ -25,3 +25,11 @@ test("review form starts anonymous and accepts incomplete drafts", () => {
   assert.equal(catalogInputs.reviews.safeParse(form).success, true);
   assert.ok(catalogFields.clients.some((f) => f.key === "contactEmail"));
 });
+
+test("client form exposes an optional job title", () => {
+  const field = catalogFields.clients.find((f) => f.key === "jobTitle");
+  assert.ok(field);
+  assert.equal(field.required, undefined);
+  assert.equal(field.max, 160);
+  assert.equal(initialCatalogForm("clients").jobTitle, "");
+});

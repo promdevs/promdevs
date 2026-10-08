@@ -17,7 +17,27 @@ import { validateProbe, type TempMedia } from "../src/storage/project-media.js";
 import { portfolioSaveSql, portfolioStateSql } from "../src/portfolio.js";
 import { validateImage } from "../src/storage/policy.js";
 import { HttpError } from "../src/errors.js";
+import { quickClientInputSchema } from "@promdevs/contracts";
 import { request as httpRequest } from "node:http";
+test("quick client creation accepts and normalizes optional job titles", () => {
+  assert.equal(quickClientInputSchema.parse({ name: "Client" }).jobTitle, null);
+  assert.equal(
+    quickClientInputSchema.parse({ name: "Client", jobTitle: "  CEO  " })
+      .jobTitle,
+    "CEO",
+  );
+  assert.equal(
+    quickClientInputSchema.parse({ name: "Client", jobTitle: "  " }).jobTitle,
+    null,
+  );
+  assert.equal(
+    quickClientInputSchema.safeParse({
+      name: "Client",
+      jobTitle: "x".repeat(161),
+    }).success,
+    false,
+  );
+});
 async function fixture(role: "owner" | "admin" | "editor" = "owner") {
   const auth = new MemoryAuth();
   const id = randomUUID();

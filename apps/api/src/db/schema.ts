@@ -108,6 +108,7 @@ export const clients = pgTable(
       .notNull()
       .default("organization"),
     publicName: text("public_name"),
+    jobTitle: text("job_title"),
     industry: text("industry"),
     websiteUrl: text("website_url"),
     logo: text("logo"),

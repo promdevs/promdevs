@@ -72,7 +72,7 @@ async function fixture(role: "owner" | "admin" | "editor" = "owner") {
   };
 }
 const inputs = {
-  clients: { name: "Private client" },
+  clients: { name: "Private client", jobTitle: "Founder" },
   contributors: { name: "Designer" },
   skills: { name: "TypeScript", slug: "typescript", category: "Frontend" },
   reviews: { body: "Very thoughtful work.", rating: 4.99 },
@@ -84,6 +84,7 @@ for (const kind of catalogKinds)
       let r = await f.request("/" + kind, "POST", inputs[kind]);
       assert.equal(r.status, 201);
       let { record } = await r.json();
+      if (kind === "clients") assert.equal(record.jobTitle, "Founder");
       assert.equal(
         (await f.request("/" + kind + "?limit=20&offset=0")).status,
         200,
@@ -105,6 +106,7 @@ for (const kind of catalogKinds)
         409,
       );
       record = (await r.json()).record;
+      if (kind === "clients") assert.equal(record.jobTitle, "Founder");
       if (kind !== "skills") {
         r = await f.request(`/${kind}/${record.id}/state`, "POST", {
           state: "archived",
@@ -135,6 +137,50 @@ for (const kind of catalogKinds)
       await f.close();
     }
   });
+test("client job titles are optional, trimmed, bounded, and editable independently of reviews", async () => {
+  for (const jobTitle of [undefined, null, "", "   "])
+    assert.equal(
+      catalogInputs.clients.parse({ name: "Client", jobTitle }).jobTitle,
+      null,
+    );
+  assert.equal(
+    catalogInputs.clients.parse({ name: "Client", jobTitle: "  Founder  " })
+      .jobTitle,
+    "Founder",
+  );
+  assert.equal(
+    catalogInputs.clients.safeParse({
+      name: "Client",
+      jobTitle: "x".repeat(161),
+    }).success,
+    false,
+  );
+  const f = await fixture();
+  try {
+    const created = await f.request("/clients", "POST", {
+      name: "Client",
+      jobTitle: "Founder",
+    });
+    assert.equal(created.status, 201);
+    let { record } = await created.json();
+    for (const jobTitle of ["Product Lead", ""]) {
+      const updated = await f.request(`/clients/${record.id}`, "PUT", {
+        record: { name: "Client", jobTitle },
+        expectedUpdatedAt: record.updatedAt,
+      });
+      assert.equal(updated.status, 200);
+      record = (await updated.json()).record;
+      assert.equal(record.jobTitle, jobTitle || null);
+      const fetched = await f.request(`/clients/${record.id}`);
+      assert.equal((await fetched.json()).record.jobTitle, jobTitle || null);
+    }
+    const review = catalogInputs.reviews.parse({});
+    assert.equal(review.authorRole, null);
+    assert.equal(review.showIdentity, false);
+  } finally {
+    await f.close();
+  }
+});
 test("catalog auth, origin, input limits, and unknown endpoints", async () => {
   const f = await fixture();
   try {
