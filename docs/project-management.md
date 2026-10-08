@@ -3,8 +3,9 @@
 ## Scope
 
 API + admin only. The public website and its existing project contracts are
-unchanged. No schema migration is introduced; the existing portfolio and admin
-tables must already be applied. No live records or R2 objects are created by
+unchanged. The existing portfolio and admin tables must already be applied;
+incremental migrations below update defaults without rewriting records.
+No live records or R2 objects are created by
 builds/tests or startup.
 
 The admin uses a full-page editor with explicit **Save draft**. Only a title is
@@ -31,6 +32,24 @@ are read-only in this editor; owners/admins can restore archived records as draf
 - Timeline/team: internal dates, milestones, contributor roles, and notes.
   Elapsed duration is calculated from the start/end dates for future public use.
 - Search/placement: SEO copy, social image, featured flag, and sort order.
+
+### Display order and review identity
+
+New projects and reviews default to sort order **10**. Lower values appear first
+in administrative lists and the existing public project API. Placement is applied
+before pagination; featured status only breaks ties between equal sort values.
+Explicit zero remains valid. Existing saved values are not changed.
+
+Review lists show the author name above their optional company, rather than using
+the optional review title as the primary label. Reviews without an author display
+“Unnamed author” in the private admin. Searching still matches author, company,
+title, source, and rating. This does not change public identity visibility.
+
+`0007_display_order_defaults.sql` changes only the database defaults on
+`projects.sort_order` and `reviews.sort_order`. Generate/check migrations offline
+with `pnpm db:generate` and review status using `pnpm db:status`. Apply pending
+migrations with `pnpm db:migrate` when authorized; migration generation does not
+apply anything to the database.
 
 Quick-create/select supports basic clients and contributors without full
 management screens. These records are created immediately; their project links
@@ -106,8 +125,8 @@ invalidated during an upload, but cannot guarantee cleanup after network failure
 
 ## Deployment and verification
 
-1. Deploy API first with existing schema and R2 runtime variables. Verify
-   `ffprobe -version` in its container. No new migration or seed is required.
+1. Review/apply pending migrations, then deploy API with the existing R2 runtime
+   variables. Verify `ffprobe -version` in its container. No seed is required.
 2. Deploy admin with the updated Nginx template. Upload routes allow 50 MiB raw
    bodies and longer timeouts; normal API requests retain short proxy deadlines.
 3. Verify login and draft workflows. Upload smoke tests against a development

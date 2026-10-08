@@ -22,6 +22,7 @@ test("review form starts anonymous and accepts incomplete drafts", () => {
   const form = initialCatalogForm("reviews");
   assert.equal(form.showIdentity, false);
   assert.equal(form.clientId, null);
+  assert.equal(form.sortOrder, 10);
   assert.equal(catalogInputs.reviews.safeParse(form).success, true);
   assert.ok(catalogFields.clients.some((f) => f.key === "contactEmail"));
 });

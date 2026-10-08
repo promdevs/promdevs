@@ -37,12 +37,39 @@ export class MemoryCatalog implements CatalogStore {
   }
   async list(kind: CatalogKind, { q, state, limit, offset }: CatalogQuery) {
     const rows = [...this.rows[kind].values()]
+      .filter((r) => {
+        const review = "authorName" in r;
+        const searchable = review
+          ? `${r.authorName ?? "Unnamed author"} ${r.authorCompany ?? ""} ${r.title ?? ""} ${r.rating ?? ""} ${r.source}`
+          : "name" in r
+            ? `${r.name} ${"slug" in r ? r.slug + " " + r.category : "publicName" in r ? (r.publicName ?? r.industry ?? r.clientType) : (r.contactEmail ?? "")}`
+            : "";
+        const currentState =
+          "publicationStatus" in r
+            ? r.publicationStatus
+            : "status" in r
+              ? r.status
+              : "active";
+        return (
+          (state === "all" || state === currentState) &&
+          searchable.toLowerCase().includes(q.toLowerCase())
+        );
+      })
+      .sort((a, b) => {
+        if ("sortOrder" in a && "sortOrder" in b) {
+          const placement =
+            a.sortOrder - b.sortOrder ||
+            Number(b.featured) - Number(a.featured);
+          if (placement) return placement;
+        }
+        return b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id;
+      })
       .map((r) => {
         const name =
           "name" in r
             ? r.name
             : "title" in r
-              ? r.title || r.authorName || "Untitled review"
+              ? r.authorName || "Unnamed author"
               : "Record";
         const detail =
           "category" in r
@@ -65,13 +92,9 @@ export class MemoryCatalog implements CatalogStore {
           updatedAt: r.updatedAt,
           references: kind === "skills" && this.linkedSkills.has(r.id) ? 1 : 0,
           imageUrl: "logo" in r ? r.logo : "iconUrl" in r ? r.iconUrl : null,
+          authorCompany: "authorCompany" in r ? r.authorCompany : null,
         };
-      })
-      .filter(
-        (r) =>
-          (state === "all" || state === r.state) &&
-          (r.name + " " + r.detail).toLowerCase().includes(q.toLowerCase()),
-      );
+      });
     return { records: rows.slice(offset, offset + limit), total: rows.length };
   }
   async get(kind: CatalogKind, id: number) {

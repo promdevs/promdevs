@@ -10,7 +10,11 @@ import {
 } from "@promdevs/contracts";
 import { hashPassword } from "../src/auth.js";
 import { createApiServer } from "../src/server.js";
-import { catalogSaveSql, catalogStateSql } from "../src/catalog.js";
+import {
+  catalogListSql,
+  catalogSaveSql,
+  catalogStateSql,
+} from "../src/catalog.js";
 import { MemoryAuth, MemoryProjects } from "./fixtures.js";
 import { MemoryCatalog } from "./catalog-fixtures.js";
 async function fixture(role: "owner" | "admin" | "editor" = "owner") {
@@ -86,6 +90,78 @@ const inputs = {
   skills: { name: "TypeScript", slug: "typescript", category: "Frontend" },
   reviews: { body: "Very thoughtful work.", rating: 4.99 },
 };
+
+test("review defaults use 10, preserve explicit zero, and reject negative orders", () => {
+  assert.equal(catalogInputs.reviews.parse({ body: "Review" }).sortOrder, 10);
+  assert.equal(catalogInputs.reviews.parse({ sortOrder: 0 }).sortOrder, 0);
+  assert.equal(
+    catalogInputs.reviews.safeParse({ sortOrder: -1 }).success,
+    false,
+  );
+  const sql = catalogListSql("reviews");
+  assert.equal(
+    (sql.match(/ORDER BY sort_order ASC,featured DESC/g) ?? []).length,
+    2,
+  );
+  assert.match(sql, /'authorCompany',author_company/);
+  assert.match(sql, /coalesce\(nullif\(author_name,''\),'Unnamed author'\)/);
+  assert.match(sql, /coalesce\(title,''\) ILIKE/);
+  assert.match(sql, /coalesce\(author_company,''\) ILIKE/);
+  assert.doesNotMatch(catalogListSql("clients"), /ORDER BY sort_order/);
+});
+
+test("review lists show author and company, sorted before pagination regardless of featured state", async () => {
+  const f = await fixture();
+  try {
+    for (const review of [
+      {
+        title: "Hidden listing title",
+        authorName: "Later",
+        authorCompany: "Later Co",
+        sortOrder: 20,
+        featured: true,
+      },
+      {
+        title: "Searchable review title",
+        authorName: "First",
+        authorCompany: "First Co",
+        sortOrder: 0,
+      },
+      { authorName: "Default", authorCompany: "Default Co" },
+    ]) {
+      const response = await f.request("/reviews", "POST", {
+        ...review,
+        body: "A thoughtful review.",
+      });
+      assert.equal(response.status, 201);
+    }
+    const first = await (await f.request("/reviews?limit=1")).json();
+    assert.equal(first.total, 3);
+    assert.equal(first.records[0].name, "First");
+    assert.equal(first.records[0].authorCompany, "First Co");
+    const second = await (await f.request("/reviews?limit=1&offset=1")).json();
+    assert.equal(second.records[0].name, "Default");
+    for (const search of ["Searchable review title", "First Co"]) {
+      const result = await (
+        await f.request("/reviews?q=" + encodeURIComponent(search))
+      ).json();
+      assert.equal(result.total, 1);
+      assert.equal(result.records[0].name, "First");
+    }
+    const unnamed = await f.request("/reviews", "POST", {
+      title: "Optional title",
+      body: "Without an identity.",
+    });
+    assert.equal(unnamed.status, 201);
+    const result = await (
+      await f.request("/reviews?q=Optional%20title")
+    ).json();
+    assert.equal(result.records[0].name, "Unnamed author");
+    assert.equal(result.records[0].authorCompany, null);
+  } finally {
+    await f.close();
+  }
+});
 for (const kind of catalogKinds)
   test(`${kind}: create, list, update, stale-write rejection`, async () => {
     const f = await fixture();

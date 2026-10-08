@@ -153,7 +153,7 @@ export const catalogFields: Record<CatalogKind, Field[]> = {
     }),
     field("sortOrder", "Display order", "Source & placement", {
       type: "number",
-      help: "Lower numbers appear first when publishing is enabled.",
+      help: "Lower numbers appear first. New reviews default to 10.",
     }),
     field("internalNotes", "Internal notes", "Source & placement", {
       type: "textarea",
@@ -172,7 +172,7 @@ export function initialCatalogForm(kind: CatalogKind): CatalogForm {
       clientId: null,
       projectId: null,
       source: "direct",
-      sortOrder: 0,
+      sortOrder: 10,
       rating: null,
       reviewedAt: null,
     });

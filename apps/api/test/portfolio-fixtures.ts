@@ -40,11 +40,19 @@ export class MemoryPortfolio implements PortfolioStore {
       throw new HttpError(403, "Not allowed.");
   }
   async list({ q, state, limit, offset }: PortfolioQuery) {
-    const rows = [...this.rows.values()].filter(
-      (p) =>
-        (state === "all" || p.publicationStatus === state) &&
-        `${p.title} ${p.slug}`.toLowerCase().includes(q.toLowerCase()),
-    );
+    const rows = [...this.rows.values()]
+      .filter(
+        (p) =>
+          (state === "all" || p.publicationStatus === state) &&
+          `${p.title} ${p.slug}`.toLowerCase().includes(q.toLowerCase()),
+      )
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          Number(b.featured) - Number(a.featured) ||
+          b.updatedAt.localeCompare(a.updatedAt) ||
+          b.id - a.id,
+      );
     return {
       projects: rows
         .slice(offset, offset + limit)

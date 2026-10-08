@@ -14,11 +14,32 @@ import { hashPassword } from "../src/auth.js";
 import { MemoryAuth, MemoryProjects } from "./fixtures.js";
 import { MemoryPortfolio } from "./portfolio-fixtures.js";
 import { validateProbe, type TempMedia } from "../src/storage/project-media.js";
-import { portfolioSaveSql, portfolioStateSql } from "../src/portfolio.js";
+import {
+  portfolioListSql,
+  portfolioSaveSql,
+  portfolioStateSql,
+} from "../src/portfolio.js";
 import { validateImage } from "../src/storage/policy.js";
 import { HttpError } from "../src/errors.js";
 import { quickClientInputSchema } from "@promdevs/contracts";
 import { request as httpRequest } from "node:http";
+test("project display order defaults to 10 and is the primary pagination order", () => {
+  assert.equal(
+    draftProjectInputSchema.parse({ title: "Project" }).sortOrder,
+    10,
+  );
+  assert.equal(
+    draftProjectInputSchema.parse({ title: "Project", sortOrder: 0 }).sortOrder,
+    0,
+  );
+  assert.equal(
+    draftProjectInputSchema.safeParse({ title: "Project", sortOrder: -1 })
+      .success,
+    false,
+  );
+  assert.match(portfolioListSql, /ORDER BY sort_order ASC,featured DESC/);
+  assert.match(portfolioListSql, /ORDER BY p.sort_order ASC,p.featured DESC/);
+});
 test("quick client creation accepts and normalizes optional job titles", () => {
   assert.equal(quickClientInputSchema.parse({ name: "Client" }).jobTitle, null);
   assert.equal(

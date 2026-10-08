@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type { Project, ProjectInput } from "@promdevs/contracts";
 import { getDb } from "./db/client.js";
 import {
@@ -11,6 +11,13 @@ import { HttpError } from "./errors.js";
 
 export type ProjectReadScope = "public" | "admin";
 export type ProjectEditScope = { draftsOnly: boolean };
+
+export const projectListOrder = () => [
+  asc(projects.sortOrder),
+  desc(projects.featured),
+  desc(projects.year),
+  desc(projects.id),
+];
 
 export const projectEditCondition = (id: number, scope: ProjectEditScope) =>
   and(
@@ -123,11 +130,7 @@ export const projectStore: ProjectStore = {
         .select(legacyProjectFields)
         .from(projects)
         .where(projectReadCondition(scope))
-        .orderBy(
-          desc(projects.featured),
-          desc(projects.year),
-          desc(projects.id),
-        )
+        .orderBy(...projectListOrder())
     ).map(serializeProject);
   },
   async bySlug(slug) {

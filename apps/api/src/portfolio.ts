@@ -194,13 +194,16 @@ export const portfolioUploadAuditSql = `WITH ${actorCte},target AS MATERIALIZED(
   audited AS(INSERT INTO admin_audit_logs(actor_id,action,target_type,target_id,metadata)
     SELECT $1::uuid,'media.uploaded','project',target.id::text,jsonb_build_object('key',$4::text) FROM target WHERE EXISTS(SELECT 1 FROM actor WHERE role IN ('owner','admin','editor')) RETURNING id)
   SELECT EXISTS(SELECT 1 FROM audited) AS allowed`;
+export const portfolioListSql = `WITH filtered AS(SELECT * FROM projects WHERE ($1='' OR title ILIKE '%' || $1 || '%' OR coalesce(slug,'') ILIKE '%' || $1 || '%') AND ($2='all' OR publication_status=$2)),page AS(SELECT * FROM filtered ORDER BY sort_order ASC,featured DESC,updated_at DESC,id DESC LIMIT $3 OFFSET $4)
+      SELECT coalesce((SELECT jsonb_agg(${summaryJson("p")} ORDER BY p.sort_order ASC,p.featured DESC,p.updated_at DESC,p.id DESC) FROM page p),'[]'::jsonb) projects,(SELECT count(*)::int FROM filtered) total`;
 export const databasePortfolioStore: PortfolioStore = {
   async list({ q, state, limit, offset }) {
-    const [row] = await query().query(
-      `WITH filtered AS(SELECT * FROM projects WHERE ($1='' OR title ILIKE '%' || $1 || '%' OR coalesce(slug,'') ILIKE '%' || $1 || '%') AND ($2='all' OR publication_status=$2)),page AS(SELECT * FROM filtered ORDER BY featured DESC,sort_order,updated_at DESC,id DESC LIMIT $3 OFFSET $4)
-      SELECT coalesce((SELECT jsonb_agg(${summaryJson("p")} ORDER BY p.featured DESC,p.sort_order,p.updated_at DESC,p.id DESC) FROM page p),'[]'::jsonb) projects,(SELECT count(*)::int FROM filtered) total`,
-      [q, state, limit, offset],
-    );
+    const [row] = await query().query(portfolioListSql, [
+      q,
+      state,
+      limit,
+      offset,
+    ]);
     return {
       projects: row.projects.map((p: unknown) => projectSummarySchema.parse(p)),
       total: row.total,

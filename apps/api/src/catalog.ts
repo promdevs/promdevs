@@ -68,7 +68,7 @@ const config = {
   },
   reviews: {
     state: "publication_status",
-    name: "coalesce(nullif(title,''),nullif(author_name,''),'Untitled review')",
+    name: "coalesce(nullif(author_name,''),'Unnamed author')",
     detail: "coalesce(rating::text || ' / 5 · ','') || source",
     references: "CASE WHEN project_id IS NULL THEN 0 ELSE 1 END",
   },
@@ -183,7 +183,16 @@ export function catalogListSql(kind: CatalogKind) {
   const c = config[kind];
   const image =
     kind === "clients" ? "logo" : kind === "skills" ? "icon_url" : "null::text";
-  return `WITH filtered AS(SELECT p.*,${c.name} display_name,${c.detail} detail,${c.state ? "p." + c.state : "'active'::text"} state,(${c.references})::int refs,${image} image_url FROM ${kind} p WHERE ($1='' OR (${c.name}) ILIKE '%' || $1 || '%' OR (${c.detail}) ILIKE '%' || $1 || '%') ${c.state ? `AND ($2='all' OR p.${c.state}=$2)` : "AND ($2='all' OR $2='active')"}),page AS(SELECT * FROM filtered ORDER BY updated_at DESC,id DESC LIMIT $3 OFFSET $4) SELECT coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'name',display_name,'detail',detail,'state',state,'updatedAt',updated_at,'references',refs,'imageUrl',image_url) ORDER BY updated_at DESC,id DESC) FROM page),'[]'::jsonb) records,(SELECT count(*)::int FROM filtered) total`;
+  const company = kind === "reviews" ? "author_company" : "null::text";
+  const order =
+    kind === "reviews"
+      ? "sort_order ASC,featured DESC,updated_at DESC,id DESC"
+      : "updated_at DESC,id DESC";
+  const reviewSearch =
+    kind === "reviews"
+      ? " OR coalesce(title,'') ILIKE '%' || $1 || '%' OR coalesce(author_company,'') ILIKE '%' || $1 || '%'"
+      : "";
+  return `WITH filtered AS(SELECT p.*,${c.name} display_name,${c.detail} detail,${c.state ? "p." + c.state : "'active'::text"} state,(${c.references})::int refs,${image} image_url FROM ${kind} p WHERE ($1='' OR (${c.name}) ILIKE '%' || $1 || '%' OR (${c.detail}) ILIKE '%' || $1 || '%'${reviewSearch}) ${c.state ? `AND ($2='all' OR p.${c.state}=$2)` : "AND ($2='all' OR $2='active')"}),page AS(SELECT * FROM filtered ORDER BY ${order} LIMIT $3 OFFSET $4) SELECT coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'name',display_name,'detail',detail,'state',state,'updatedAt',updated_at,'references',refs,'imageUrl',image_url,'authorCompany',${company}) ORDER BY ${order}) FROM page),'[]'::jsonb) records,(SELECT count(*)::int FROM filtered) total`;
 }
 export function catalogUploadAuditSql(kind: "clients" | "skills") {
   return `WITH ${actor}, audited AS (

@@ -1626,6 +1626,9 @@ export function ProjectEditor({
                     value={form.sortOrder}
                     onChange={(e) => set("sortOrder", Number(e.target.value))}
                   />
+                  <small>
+                    Lower numbers appear first. New projects default to 10.
+                  </small>
                 </label>
                 <label className="check">
                   <input
