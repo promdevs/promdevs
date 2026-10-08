@@ -64,6 +64,10 @@ export const catalogFields: Record<CatalogKind, Field[]> = {
       help: "Optional name to use when a project explicitly shows this client.",
     }),
     field("industry", "Industry", "Identity"),
+    field("jobTitle", "Job title", "Identity", {
+      max: 160,
+      help: "Optional role, such as Founder, CEO, or Product Lead. For an organization, use its contact person's role. Review author roles are managed separately.",
+    }),
     field("websiteUrl", "Website URL", "Identity", { type: "url" }),
     field("logo", "Logo URL", "Identity", {
       type: "url",

@@ -36,6 +36,13 @@
       "when": 1791369928619,
       "tag": "0004_admin_access_control",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791420134478,
+      "tag": "0005_client_job_title",
+      "breakpoints": true
     }
   ]
 }

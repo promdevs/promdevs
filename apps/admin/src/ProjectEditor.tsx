@@ -129,6 +129,7 @@ export function ProjectEditor({
   const [quick, setQuick] = useState<"clients" | "contributors" | null>(null);
   const [quickName, setQuickName] = useState("");
   const [publicName, setPublicName] = useState("");
+  const [quickJobTitle, setQuickJobTitle] = useState("");
   const [clientType, setClientType] = useState("organization");
   const [quickWebsite, setQuickWebsite] = useState("");
   const [teamChoice, setTeamChoice] = useState("");
@@ -264,6 +265,7 @@ export function ProjectEditor({
                 name: quickName,
                 clientType,
                 publicName,
+                jobTitle: quickJobTitle,
                 websiteUrl: quickWebsite,
               }
             : { name: quickName },
@@ -279,6 +281,7 @@ export function ProjectEditor({
       setQuick(null);
       setQuickName("");
       setPublicName("");
+      setQuickJobTitle("");
       setQuickWebsite("");
       setNotice(
         "Record created and selected. Save the project to keep the relationship.",
@@ -818,6 +821,15 @@ export function ProjectEditor({
                       value={publicName}
                       maxLength={160}
                       onChange={(e) => setPublicName(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Job title (optional)
+                    <input
+                      value={quickJobTitle}
+                      maxLength={160}
+                      placeholder="e.g. Founder or Product Lead"
+                      onChange={(e) => setQuickJobTitle(e.target.value)}
                     />
                   </label>
                   <label>

@@ -247,7 +247,14 @@ export const databasePortfolioStore: PortfolioStore = {
   async quickCreate(actor, kind, input) {
     const cols =
       kind === "clients"
-        ? ["name", "client_type", "public_name", "industry", "website_url"]
+        ? [
+            "name",
+            "client_type",
+            "public_name",
+            "job_title",
+            "industry",
+            "website_url",
+          ]
         : ["name"];
     const values =
       kind === "clients"
@@ -255,6 +262,7 @@ export const databasePortfolioStore: PortfolioStore = {
             input.name,
             input.clientType,
             input.publicName,
+            input.jobTitle,
             input.industry,
             input.websiteUrl,
           ]

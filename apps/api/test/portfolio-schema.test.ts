@@ -113,6 +113,8 @@ test("new portfolio records are drafts and identity defaults are private", () =>
   assert.equal(projects.clientId.notNull, false);
   assert.equal(reviews.clientId.notNull, false);
   assert.equal(reviews.projectId.notNull, false);
+  assert.equal(clients.jobTitle.name, "job_title");
+  assert.equal(clients.jobTitle.notNull, false);
 });
 
 test("project attribution and review visibility/identity have independent controls", () => {
