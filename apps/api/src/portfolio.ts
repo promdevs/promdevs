@@ -10,6 +10,10 @@ import {
 } from "@promdevs/contracts";
 import type { AuthIdentity } from "./access-control/auth-store.js";
 import { HttpError } from "./errors.js";
+import {
+  projectMissingPublicationSql,
+  publicationTransitionSql,
+} from "./publication.js";
 
 export type PortfolioQuery = {
   q: string;
@@ -31,7 +35,7 @@ export interface PortfolioStore {
   state(
     actor: AuthIdentity,
     id: number,
-    state: "draft" | "archived",
+    state: "draft" | "published" | "archived",
     expected: string,
   ): Promise<AdminProject>;
   options(): Promise<PortfolioOptions>;
@@ -89,7 +93,10 @@ const fields = {
 };
 const rowJson = (alias: string) =>
   `jsonb_build_object(${Object.entries(fields)
-    .map(([key, col]) => `'${key}', ${alias}.${col}`)
+    .map(
+      ([key, col]) =>
+        `'${key}', ${key === "tags" ? `coalesce(${alias}.${col},ARRAY[]::text[])` : `${alias}.${col}`}`,
+    )
     .join(",")})`;
 const summaryJson = (alias: string) =>
   `jsonb_build_object(${Object.keys(projectSummarySchema.shape)
@@ -115,7 +122,12 @@ function query() {
     throw new HttpError(503, "Project storage is not configured.");
   return neon(process.env.DATABASE_URL);
 }
-function outcome(value: string) {
+function outcome(value: string, missing: string[] = []) {
+  if (value === "incomplete")
+    throw new HttpError(
+      400,
+      `Before publishing, complete: ${missing.join(", ")}.`,
+    );
   if (value === "forbidden")
     throw new HttpError(403, "Your account cannot change this project.");
   if (value === "missing") throw new HttpError(404, "Project not found.");
@@ -127,12 +139,17 @@ function outcome(value: string) {
   if (value === "readonly")
     throw new HttpError(
       409,
-      "Only draft projects can be edited. Publishing is deferred in this release.",
+      "Only draft projects can be edited. Unpublish a published project or restore an archived project first.",
     );
   if (value === "relations")
     throw new HttpError(
       400,
       "Choose existing active clients, skills, and contributors. Archived relationships can be retained, not newly linked.",
+    );
+  if (value === "transition")
+    throw new HttpError(
+      409,
+      "Invalid publication change. Restore archived projects before publishing; unpublish before archiving.",
     );
   if (value !== "ok")
     throw new HttpError(503, "Project management is temporarily unavailable.");
@@ -183,13 +200,16 @@ export function portfolioSaveSql(create: boolean) {
   SELECT outcome,(SELECT ${rowJson("c")} || jsonb_build_object('skillIds',$6::jsonb,'contributors',$7::jsonb) FROM changed c) AS project FROM decision`;
 }
 export const portfolioStateSql = `WITH ${actorCte},target AS MATERIALIZED(SELECT * FROM projects WHERE id=$3::int FOR UPDATE),
+  readiness AS(SELECT ${projectMissingPublicationSql("t")} missing FROM target t),
   decision AS(SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM actor WHERE role IN ('owner','admin')) THEN 'forbidden'
     WHEN NOT EXISTS(SELECT 1 FROM target) THEN 'missing'
-    WHEN (SELECT publication_status FROM target)='published' THEN 'readonly'
-    WHEN (SELECT updated_at FROM target)!=$5::timestamptz THEN 'conflict' ELSE 'ok' END AS outcome),
-  changed AS(UPDATE projects SET publication_status=$4,updated_at=clock_timestamp() WHERE id=$3::int AND (SELECT outcome FROM decision)='ok' RETURNING *),
-  audited AS(INSERT INTO admin_audit_logs(actor_id,action,target_type,target_id) SELECT $1::uuid,CASE WHEN $4='archived' THEN 'project.archived' ELSE 'project.restored' END,'project',id::text FROM changed)
-  SELECT outcome,(SELECT ${readJson("c")} FROM changed c) AS project FROM decision`;
+    WHEN (SELECT updated_at FROM target)!=$5::timestamptz THEN 'conflict'
+    ${publicationTransitionSql("publication_status")}
+    WHEN $4='published' AND cardinality((SELECT missing FROM readiness))>0 THEN 'incomplete'
+    ELSE 'ok' END AS outcome),
+  changed AS(UPDATE projects SET publication_status=$4,published_at=CASE WHEN $4='published' THEN clock_timestamp() ELSE NULL END,updated_at=clock_timestamp() WHERE id=$3::int AND (SELECT outcome FROM decision)='ok' RETURNING *),
+  audited AS(INSERT INTO admin_audit_logs(actor_id,action,target_type,target_id) SELECT $1::uuid,CASE WHEN $4='published' THEN 'project.published' WHEN $4='archived' THEN 'project.archived' WHEN (SELECT publication_status FROM target)='published' THEN 'project.unpublished' ELSE 'project.restored' END,'project',id::text FROM changed)
+  SELECT outcome,(SELECT missing FROM readiness) missing,(SELECT ${readJson("c")} FROM changed c) AS project FROM decision`;
 export const portfolioUploadAuditSql = `WITH ${actorCte},target AS MATERIALIZED(SELECT id FROM projects WHERE id=$3::int AND publication_status='draft' FOR SHARE),
   audited AS(INSERT INTO admin_audit_logs(actor_id,action,target_type,target_id,metadata)
     SELECT $1::uuid,'media.uploaded','project',target.id::text,jsonb_build_object('key',$4::text) FROM target WHERE EXISTS(SELECT 1 FROM actor WHERE role IN ('owner','admin','editor')) RETURNING id)
@@ -237,7 +257,7 @@ export const databasePortfolioStore: PortfolioStore = {
       state,
       expected,
     ]);
-    outcome(row.outcome);
+    outcome(row.outcome, row.missing ?? []);
     return adminProjectSchema.parse(row.project);
   },
   async options() {

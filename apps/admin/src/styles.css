@@ -2198,6 +2198,56 @@ td:last-child {
 .catalog-scroll-hint {
   display: none;
 }
+.publication-panel {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px 24px;
+  margin: 18px 0 28px;
+  min-width: 0;
+}
+.publication-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.publication-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 19px;
+  margin: 5px 0 0;
+}
+.publication-heading .button {
+  transition: border-color 0.2s;
+}
+.publication-panel p {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.publication-panel .eyebrow {
+  font-size: 10px;
+}
+.publication-checklist {
+  padding-left: 19px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.9;
+  margin: 8px 0 0;
+}
+.publication-ready {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--blue);
+}
+@media (max-width: 600px) {
+  .publication-panel {
+    padding: 18px;
+  }
+}
 @media (max-width: 1000px) {
   .catalog-scroll-hint {
     display: block;

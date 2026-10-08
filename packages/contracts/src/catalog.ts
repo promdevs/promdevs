@@ -170,7 +170,7 @@ export const catalogQuerySchema = z
 export type CatalogQuery = z.infer<typeof catalogQuerySchema>;
 export const catalogStateSchema = z
   .object({
-    state: z.enum(["active", "draft", "archived"]),
+    state: z.enum(["active", "draft", "published", "archived"]),
     expectedUpdatedAt: catalogVersionSchema,
   })
   .strict();

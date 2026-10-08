@@ -273,7 +273,7 @@ export const draftProjectUpdateSchema = z
   .strict();
 export const projectStateInputSchema = z
   .object({
-    state: z.enum(["draft", "archived"]),
+    state: z.enum(["draft", "published", "archived"]),
     expectedUpdatedAt: z.string().datetime({ offset: true }),
   })
   .strict();

@@ -447,7 +447,7 @@ test("editor creates and reads shared records but cannot overwrite or archive th
     await f.close();
   }
 });
-test("review relationships, independent anonymous identity, duplicate sources, and draft-only state", async () => {
+test("review relationships, independent anonymous identity, duplicate sources, and publication", async () => {
   const f = await fixture();
   try {
     const client = (
@@ -493,7 +493,7 @@ test("review relationships, independent anonymous identity, duplicate sources, a
           expectedUpdatedAt: record.updatedAt,
         })
       ).status,
-      400,
+      200,
     );
     const options = await (await f.request("/options?q=Client")).json();
     assert.equal(options.clients.length, 1);

@@ -37,7 +37,7 @@ export const catalogTitles: Record<
     singular: "review",
     title: "Reviews",
     description: "Feedback and testimonials, organized by client and project.",
-    note: "Reviews are saved privately as drafts. Identity is hidden by default and independent of a project's Show client setting. Publishing is not enabled yet.",
+    note: "Reviews start as private drafts. Owners and admins can publish complete reviews. Author identity is hidden by default and independent of a project's Show client setting.",
   },
   skills: {
     singular: "skill",

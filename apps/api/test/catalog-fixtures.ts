@@ -1,5 +1,6 @@
 import {
   catalogRecordSchemas,
+  reviewPublicationIssues,
   type CatalogKind,
   type CatalogInput,
   type CatalogQuery,
@@ -203,19 +204,40 @@ export class MemoryCatalog implements CatalogStore {
     if (kind === "skills") throw new HttpError(400, "No skill state.");
     const previous = this.rows[kind].get(id);
     if (!previous) throw new HttpError(404, "Not found.");
-    if (
-      previous.updatedAt !== expected ||
-      ("publicationStatus" in previous &&
-        previous.publicationStatus === "published")
-    )
+    if (previous.updatedAt !== expected)
       throw new HttpError(409, "Record changed or read-only.");
+    if ("publicationStatus" in previous) {
+      if (
+        state === previous.publicationStatus ||
+        (state === "published" && previous.publicationStatus !== "draft") ||
+        (state === "archived" && previous.publicationStatus !== "draft")
+      )
+        throw new HttpError(409, "Invalid publication transition.");
+      const missing = reviewPublicationIssues(previous);
+      if (state === "published" && missing.length)
+        throw new HttpError(
+          400,
+          `Before publishing, complete: ${missing.join(", ")}.`,
+        );
+    }
+    const now = new Date(++this.clock).toISOString();
     const row = catalogRecordSchemas[kind].parse({
       ...previous,
       [kind === "reviews" ? "publicationStatus" : "status"]: state,
-      updatedAt: new Date(++this.clock).toISOString(),
+      ...(kind === "reviews"
+        ? { publishedAt: state === "published" ? now : null }
+        : {}),
+      updatedAt: now,
     });
     this.rows[kind].set(id, row);
-    this.audits.push(kind + ".state_changed");
+    this.audits.push(
+      kind === "reviews" &&
+        (state === "published" ||
+          ("publicationStatus" in previous &&
+            previous.publicationStatus === "published"))
+        ? `review.${state === "published" ? "published" : "unpublished"}`
+        : kind + ".state_changed",
+    );
     return structuredClone(row);
   }
   async options(q: string, clientId?: number, projectId?: number) {

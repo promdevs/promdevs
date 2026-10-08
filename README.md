@@ -94,11 +94,14 @@ environment variables, or Git.
 
 The admin now has a full-page draft project editor: title-only creation, search,
 filters, pagination, skills, clients, contributors, Markdown case studies, media,
-links, timelines, and SEO preparation. Owners/admins can archive and restore;
-editors can create/edit drafts. Publishing is disabled and existing published
-records are read-only in this editor. See [project management](docs/project-management.md).
+links, timelines, and SEO preparation. Owners/admins can publish, unpublish,
+archive and restore projects and reviews; editors can create/edit drafts.
+Published records are read-only until unpublished. Publishing validates the saved
+content, checks its version, and records an audit event. See [project management](docs/project-management.md).
 Public reads still require `publication_status = published`; `status` describes
-work progress. Password recovery, MFA, and review management remain future work.
+work progress. Password recovery and MFA remain future work. New published-only
+portfolio endpoints are documented in [publishing](docs/publishing.md); the public
+website UI has not been changed or connected to these new endpoints yet.
 Owners can use **Users** to invite people, change names/roles, disable/reactivate
 accounts, and revoke sessions. **Security** lets any signed-in user change their
 own password after confirming the current one. Editors can create/edit drafts, but cannot edit published

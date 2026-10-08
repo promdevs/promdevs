@@ -146,7 +146,7 @@ export function CatalogWorkspace(
               </option>
               <option value="archived">Archived</option>
               {kind === "reviews" && (
-                <option value="published">Previously published</option>
+                <option value="published">Published</option>
               )}
             </select>
           </label>

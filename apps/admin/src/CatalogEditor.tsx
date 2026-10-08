@@ -5,6 +5,7 @@ import {
   contributorProfileUrl,
   catalogRecordSchemas,
   reviewOptionsSchema,
+  reviewPublicationIssues,
   type CatalogRecord,
   type ReviewOptions,
 } from "@promdevs/contracts";
@@ -19,6 +20,7 @@ import {
 import type { CatalogPageProps } from "./catalog-fields";
 import { CatalogImageUpload } from "./CatalogImageUpload";
 import { clientReviewIdentity, slugFromName } from "./catalog-field-helpers";
+import { PublicationPanel } from "./PublicationPanel";
 const message = (e: unknown) =>
   e instanceof Error ? e.message : "Could not complete this request.";
 export function CatalogEditor({
@@ -50,7 +52,14 @@ export function CatalogEditor({
   const [uploading, setUploading] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
   const autofillRequest = useRef<AbortController | null>(null);
-  useEffect(() => () => autofillRequest.current?.abort(), []);
+  const publicationRequest = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      autofillRequest.current?.abort();
+      publicationRequest.current?.abort();
+    },
+    [],
+  );
   const working = busy || uploading || autofilling;
   const dirty = JSON.stringify(form) !== baseline;
   const profileUrl =
@@ -258,6 +267,64 @@ export function CatalogEditor({
       setBusy(false);
     }
   }
+  const reviewMissing =
+    kind === "reviews"
+      ? reviewPublicationIssues({
+          clientId: Number(form.clientId) || null,
+          body: String(form.body || ""),
+          showIdentity: !!form.showIdentity,
+          authorName: String(form.authorName || "") || null,
+        })
+      : [];
+  async function changePublication(state: "draft" | "published") {
+    if (
+      kind !== "reviews" ||
+      !record ||
+      dirty ||
+      working ||
+      identity.role === "editor"
+    )
+      return;
+    if (state === "published" && reviewMissing.length) return;
+    if (
+      !window.confirm(
+        state === "published"
+          ? `Publish this review? ${form.showIdentity ? "The saved author name, role, company and avatar will be public." : "Author identity will remain hidden."} Internal notes and client contact details are never included.`
+          : "Unpublish this review? It will return to a private, editable draft. Already cached website pages may need refreshing.",
+      )
+    )
+      return;
+    const controller = new AbortController();
+    publicationRequest.current = controller;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const body = await api<{ record: unknown }>(
+        `/catalog/reviews/${record.id}/state`,
+        {
+          method: "POST",
+          signal: controller.signal,
+          body: JSON.stringify({ state, expectedUpdatedAt: record.updatedAt }),
+        },
+      );
+      if (controller.signal.aborted) return;
+      const value = catalogRecordSchemas.reviews.parse(body.record);
+      setRecord(value);
+      setNotice(
+        state === "published"
+          ? "Review published."
+          : "Review unpublished. You can edit the draft now.",
+      );
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(message(e));
+      }
+    } finally {
+      if (!controller.signal.aborted) setBusy(false);
+    }
+  }
   const info = catalogTitles[kind];
   return (
     <section
@@ -305,10 +372,26 @@ export function CatalogEditor({
         <Button onClick={() => setReload((v) => v + 1)}>Retry loading</Button>
       ) : (
         <form onSubmit={save}>
+          {kind === "reviews" && (
+            <PublicationPanel
+              kind="review"
+              status={
+                record && "publicationStatus" in record
+                  ? record.publicationStatus
+                  : "draft"
+              }
+              saved={!!record}
+              dirty={dirty}
+              busy={working}
+              canPublish={identity.role !== "editor"}
+              missing={reviewMissing}
+              onChange={(state) => void changePublication(state)}
+            />
+          )}
           {readonly && (
             <p className="portfolio-note">
               {kind === "reviews"
-                ? "Archived and published reviews are read-only. Restore an archived review from the list to edit it."
+                ? "Unpublish a published review or restore an archived review from the list before editing."
                 : "Editors can create and view shared records. An owner or admin can update them."}
             </p>
           )}

@@ -13,6 +13,10 @@ import {
 } from "@promdevs/contracts";
 import type { AuthIdentity } from "./access-control/auth-store.js";
 import { HttpError } from "./errors.js";
+import {
+  reviewMissingPublicationSql,
+  publicationTransitionSql,
+} from "./publication.js";
 
 export interface CatalogStore {
   list(
@@ -116,15 +120,21 @@ export function catalogSaveSql(kind: CatalogKind, create: boolean) {
 export function catalogStateSql(kind: Exclude<CatalogKind, "skills">) {
   const state = config[kind].state;
   return `WITH ${actor},target AS MATERIALIZED(SELECT * FROM ${kind} WHERE id=$3::int FOR UPDATE),
+    ${kind === "reviews" ? `readiness AS(SELECT ${reviewMissingPublicationSql("t")} missing FROM target t),` : ""}
     decision AS(SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM actor WHERE role IN ('owner','admin')) THEN 'forbidden'
     WHEN NOT EXISTS(SELECT 1 FROM target) THEN 'missing'
     WHEN (SELECT updated_at FROM target)!=$5::timestamptz THEN 'conflict'
-    ${kind === "reviews" ? "WHEN (SELECT publication_status FROM target)='published' THEN 'readonly'" : ""} ELSE 'ok' END outcome),
-    changed AS(UPDATE ${kind} SET ${state}=$4,updated_at=clock_timestamp() WHERE id=$3::int AND (SELECT outcome FROM decision)='ok' RETURNING *),
-    audited AS(INSERT INTO admin_audit_logs(actor_id,action,target_type,target_id) SELECT $1::uuid,'${kind}.state_changed','${kind}',id::text FROM changed)
-    SELECT outcome,(SELECT ${rowJson(kind, "c")} FROM changed c) record FROM decision`;
+    ${kind === "reviews" ? `${publicationTransitionSql("publication_status")} WHEN $4='published' AND cardinality((SELECT missing FROM readiness))>0 THEN 'incomplete'` : "WHEN $4 NOT IN ('active','archived') THEN 'transition'"} ELSE 'ok' END outcome),
+    changed AS(UPDATE ${kind} SET ${state}=$4,${kind === "reviews" ? "published_at=CASE WHEN $4='published' THEN clock_timestamp() ELSE NULL END," : ""}updated_at=clock_timestamp() WHERE id=$3::int AND (SELECT outcome FROM decision)='ok' RETURNING *),
+    audited AS(INSERT INTO admin_audit_logs(actor_id,action,target_type,target_id) SELECT $1::uuid,${kind === "reviews" ? "CASE WHEN $4='published' THEN 'review.published' WHEN $4='archived' THEN 'reviews.state_changed' WHEN (SELECT publication_status FROM target)='published' THEN 'review.unpublished' ELSE 'reviews.state_changed' END" : `'${kind}.state_changed'`},'${kind}',id::text FROM changed)
+    SELECT outcome,${kind === "reviews" ? "(SELECT missing FROM readiness)" : "NULL::text[]"} missing,(SELECT ${rowJson(kind, "c")} FROM changed c) record FROM decision`;
 }
-function outcome(value: string) {
+function outcome(value: string, missing: string[] = []) {
+  if (value === "incomplete")
+    throw new HttpError(
+      400,
+      `Before publishing, complete: ${missing.join(", ")}.`,
+    );
   const errors: Record<string, [number, string]> = {
     forbidden: [403, "Your account cannot change this record."],
     missing: [404, "Record not found."],
@@ -134,7 +144,11 @@ function outcome(value: string) {
     ],
     readonly: [
       409,
-      "Only draft reviews can be edited. Publishing is not enabled yet.",
+      "Only draft reviews can be edited. Unpublish a published review or restore an archived review first.",
+    ],
+    transition: [
+      409,
+      "Invalid publication change. Restore archived reviews before publishing; unpublish before archiving.",
     ],
     linked: [
       409,
@@ -161,7 +175,7 @@ function query() {
 async function write(kind: CatalogKind, sql: string, params: unknown[]) {
   try {
     const [row] = await query().query(sql, params);
-    outcome(row.outcome);
+    outcome(row.outcome, row.missing ?? []);
     return catalogRecordSchemas[kind].parse(row.record);
   } catch (error) {
     if (

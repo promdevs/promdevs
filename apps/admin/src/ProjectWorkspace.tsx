@@ -121,6 +121,7 @@ export function ProjectWorkspace({
       <ProjectEditor
         key={selected}
         id={selected === "new" ? null : Number(selected)}
+        identity={identity}
         onExpired={onExpired}
         onDirtyChange={onDirtyChange}
         onClose={() => navigate(null)}
@@ -172,7 +173,7 @@ export function ProjectWorkspace({
             <option value="all">All projects</option>
             <option value="draft">Drafts</option>
             <option value="archived">Archived</option>
-            <option value="published">Previously published</option>
+            <option value="published">Published</option>
           </select>
         </label>
         <button
@@ -396,8 +397,8 @@ export function ProjectWorkspace({
         </Button>
       </div>
       <p className="portfolio-note">
-        Drafts are private. Archiving retains records and media. Publishing is
-        not enabled yet.
+        Drafts are private. Open a project to publish or unpublish it. Archiving
+        retains records and media.
       </p>
     </section>
   );
