@@ -20,7 +20,7 @@ export default async function ProjectsPage() {
 
   return (
     <>
-      <Header />
+      <Header homePath="/?view=html" />
       <main id="main-content" className="shell projects-page">
         <Link href="/" className="text-link mb-12">
           <ChevronLeft size={16} aria-hidden /> Back to home
@@ -36,7 +36,7 @@ export default async function ProjectsPage() {
         </MotionReveal>
         <ProjectsFilter projects={allProjects} />
       </main>
-      <Footer />
+      <Footer homePath="/?view=html" />
     </>
   );
 }

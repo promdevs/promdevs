@@ -206,8 +206,15 @@ new draft requests allow 256 KiB. Media uses a separately bounded raw-body route
 
 Project pages fetch server-side without caching so admin changes are visible on the
 next request. Missing projects return 404; service outages on detail pages produce
-an error rather than a false 404. The homepage remains statically rendered. A public
+an error rather than a false 404. The homepage streams its published work and reviews
+independently while keeping the hero immediately available. The web uses the published-only
+`/api/portfolio/projects` and `/api/portfolio/reviews` APIs, not the legacy compatibility catalog. A public
 content cache with invalidation can be added later without changing the API contract.
+
+The client-story globe is independent of review identities and uses country-level
+coordinates only. Sample countries are labelled and available only in development;
+production displays an unmarked globe until verified countries are supplied. No database
+schema or admin changes are needed for this release. See [web portfolio notes](docs/web-portfolio.md).
 
 ## Separate Coolify Deployments
 

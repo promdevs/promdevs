@@ -6,12 +6,14 @@ export function MotionReveal({
   delayMs = 0,
   entrance = false,
   as: Tag = "div",
+  image = false,
 }: {
   children: ReactNode;
   className?: string;
   delayMs?: number;
   entrance?: boolean;
   as?: "div" | "span";
+  image?: boolean;
 }) {
   const ref = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -33,11 +35,22 @@ export function MotionReveal({
             {
               opacity: entrance ? 0.72 : 0,
               transform: `translateY(${entrance ? 14 : 18}px)`,
+              ...(image
+                ? {
+                    clipPath: "inset(0 0 100% 0 round 16px)",
+                    opacity: 1,
+                    transform: "none",
+                  }
+                : {}),
             },
-            { opacity: 1, transform: "translateY(0)" },
+            {
+              opacity: 1,
+              transform: "translateY(0)",
+              ...(image ? { clipPath: "inset(0 0 0% 0 round 16px)" } : {}),
+            },
           ],
           {
-            duration: 650,
+            duration: image ? 950 : 850,
             delay: delayMs,
             easing: "cubic-bezier(.2,.75,.2,1)",
             fill: "backwards",
@@ -76,7 +89,7 @@ export function MotionReveal({
       node.removeEventListener("focusin", showImmediately);
       delete node.dataset.pending;
     };
-  }, [delayMs, entrance]);
+  }, [delayMs, entrance, image]);
   return (
     <Tag
       ref={(node) => {

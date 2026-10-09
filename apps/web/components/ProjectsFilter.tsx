@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Search, X } from "lucide-react";
-import { type Project } from "@promdevs/contracts";
+import { type PublicProjectSummary } from "@promdevs/contracts";
 import { ProjectCard } from "@/components/ProjectCard";
 import { cn } from "@/lib/utils";
 import { ActionLink } from "@/components/Action";
@@ -11,7 +11,7 @@ import { MotionReveal } from "@/components/MotionReveal";
 const ALL = "All";
 
 interface ProjectsFilterProps {
-  projects: Project[];
+  projects: PublicProjectSummary[];
 }
 
 export function ProjectsFilter({ projects }: ProjectsFilterProps) {
@@ -19,7 +19,9 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
   const [activeCategory, setActiveCategory] = useState(ALL);
 
   const categories = useMemo(() => {
-    const cats = Array.from(new Set(projects.map((p) => p.category))).sort();
+    const cats = Array.from(
+      new Set(projects.flatMap((p) => p.productTypes)),
+    ).sort();
     return [ALL, ...cats];
   }, [projects]);
 
@@ -27,13 +29,15 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
     const q = query.toLowerCase().trim();
     return projects.filter((p) => {
       const matchesCategory =
-        activeCategory === ALL || p.category === activeCategory;
+        activeCategory === ALL || p.productTypes.includes(activeCategory);
       const matchesQuery =
         !q ||
         p.title.toLowerCase().includes(q) ||
         p.description.toLowerCase().includes(q) ||
-        p.techStack.some((t) => t.toLowerCase().includes(q)) ||
-        (p.tags ?? []).some((t) => t.toLowerCase().includes(q)) ||
+        p.productTypes.some((t) =>
+          t.replaceAll("_", " ").toLowerCase().includes(q),
+        ) ||
+        p.platforms.some((t) => t.toLowerCase().includes(q)) ||
         p.category.toLowerCase().includes(q);
       return matchesCategory && matchesQuery;
     });
@@ -46,7 +50,7 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
           Project stories are being prepared. In the meantime, tell us what
           you&apos;re building.
         </p>
-        <ActionLink href="/#contact" label="Discuss your project" />
+        <ActionLink href="/?view=html#contact" label="Discuss your project" />
       </MotionReveal>
     );
   }
@@ -61,7 +65,7 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
           <input
             aria-label="Search projects"
             type="search"
-            placeholder="Search projects, tech, category…"
+            placeholder="Search projects or product types…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-full rounded-2xl border border-neutral-200 bg-white py-2.5 pl-10 pr-10 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 dark:border-white/10 dark:bg-neutral-950 dark:text-white dark:placeholder:text-neutral-500"
@@ -91,7 +95,7 @@ export function ProjectsFilter({ projects }: ProjectsFilterProps) {
                   : "border-neutral-200 bg-white text-neutral-600 hover:border-accent/50 hover:text-accent dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-300",
               )}
             >
-              {cat}
+              {cat.replaceAll("_", " ")}
             </button>
           ))}
         </div>

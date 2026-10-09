@@ -18,7 +18,7 @@
     "start": "pnpm --filter @promdevs/web start",
     "lint": "pnpm --filter @promdevs/web lint && eslint apps/api apps/admin packages",
     "typecheck": "pnpm --filter @promdevs/contracts build && pnpm -r typecheck",
-    "test": "pnpm --filter @promdevs/contracts build && pnpm --filter @promdevs/api test && pnpm --filter @promdevs/admin test",
+    "test": "pnpm --filter @promdevs/contracts build && pnpm --filter @promdevs/api test && pnpm --filter @promdevs/admin test && pnpm --filter @promdevs/web test",
     "skills:import": "pnpm --filter @promdevs/api skills:import",
     "storage:check": "pnpm --filter @promdevs/api storage:check",
     "db:generate": "pnpm --filter @promdevs/api db:generate",
