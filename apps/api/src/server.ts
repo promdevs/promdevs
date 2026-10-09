@@ -29,6 +29,7 @@ import {
   portfolioQuerySchema,
   quickClientInputSchema,
   quickContributorInputSchema,
+  publicPortfolioQuerySchema,
 } from "@promdevs/contracts";
 import { sessionCookie, sessionToken } from "./auth.js";
 import { Authentication } from "./access-control/authentication.js";
@@ -63,6 +64,10 @@ import {
 import { StorageError } from "./storage/config.js";
 
 import { databaseCatalogStore, type CatalogStore } from "./catalog.js";
+import {
+  databasePublicPortfolioStore,
+  type PublicPortfolioStore,
+} from "./public-portfolio.js";
 
 type Options = {
   store: ProjectStore;
@@ -72,6 +77,7 @@ type Options = {
   invitationMailer?: InvitationMailer;
   portfolioStore?: PortfolioStore;
   catalogStore?: CatalogStore;
+  publicPortfolioStore?: PublicPortfolioStore;
   mediaUploader?: MediaUploader;
   sendEmail: (input: ContactInput) => Promise<unknown>;
   adminOrigin: string;
@@ -152,6 +158,8 @@ export function createApiServer(options: Options) {
   const accounts = new Accounts(options.accountsStore ?? databaseAccountsStore);
   const portfolio = options.portfolioStore ?? databasePortfolioStore;
   const catalog = options.catalogStore ?? databaseCatalogStore;
+  const publicPortfolio =
+    options.publicPortfolioStore ?? databasePublicPortfolioStore;
   const media = options.mediaUploader ?? projectMediaUploader;
   let activeUploads = 0;
   const invitations = new Invitations(
@@ -201,7 +209,8 @@ export function createApiServer(options: Options) {
 
     void (async () => {
       const method = request.method;
-      const pathname = new URL(request.url || "/", "http://api.local").pathname;
+      const url = new URL(request.url || "/", "http://api.local");
+      const pathname = url.pathname;
       if (method === "GET" && pathname === "/health") {
         json(response, 200, { status: "ok", service: "promdevs-api" });
         return;
@@ -233,6 +242,39 @@ export function createApiServer(options: Options) {
         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))
           throw new HttpError(404, "Project not found.");
         const project = await options.store.bySlug(slug);
+        if (!project) throw new HttpError(404, "Project not found.");
+        json(response, 200, { project });
+        return;
+      }
+      if (
+        method === "GET" &&
+        (pathname === "/api/portfolio/projects" ||
+          pathname === "/api/portfolio/reviews")
+      ) {
+        limited(`read:${ip}`, 120, 60000);
+        const parsed = publicPortfolioQuerySchema.safeParse(
+          Object.fromEntries(url.searchParams),
+        );
+        if (!parsed.success)
+          throw new HttpError(400, "Invalid public portfolio filters.");
+        const result = pathname.endsWith("/reviews")
+          ? await publicPortfolio.reviews(parsed.data)
+          : await publicPortfolio.projects(parsed.data);
+        json(response, 200, {
+          ...result,
+          limit: parsed.data.limit,
+          offset: parsed.data.offset,
+        });
+        return;
+      }
+      if (method === "GET" && pathname.startsWith("/api/portfolio/projects/")) {
+        limited(`read:${ip}`, 120, 60000);
+        const slug = decodeURIComponent(
+          pathname.slice("/api/portfolio/projects/".length),
+        );
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))
+          throw new HttpError(404, "Project not found.");
+        const project = await publicPortfolio.project(slug);
         if (!project) throw new HttpError(404, "Project not found.");
         json(response, 200, { project });
         return;
@@ -583,18 +625,25 @@ export function createApiServer(options: Options) {
           parts.length === 3 &&
           parts[2] === "state"
         ) {
-          if (actor.role === "editor")
+          if (
+            !userHasPermission(
+              actor,
+              kind === "reviews" ? "content.publish" : "content.delete",
+            )
+          )
             throw new HttpError(
               403,
-              "Only owners and admins can archive or restore records.",
+              "Only owners and admins can change publication or archive records.",
             );
           const parsed = catalogStateSchema.safeParse(await readJson(request));
           if (
             !parsed.success ||
             kind === "skills" ||
-            !["archived", kind === "reviews" ? "draft" : "active"].includes(
-              parsed.data.state,
-            )
+            !(
+              kind === "reviews"
+                ? ["archived", "draft", "published"]
+                : ["archived", "active"]
+            ).includes(parsed.data.state)
           )
             throw new HttpError(400, "Invalid state change.");
           json(response, 200, {
@@ -782,10 +831,10 @@ export function createApiServer(options: Options) {
           parts.length === 3 &&
           method === "POST"
         ) {
-          if (!userHasPermission(actor, "content.delete"))
+          if (!userHasPermission(actor, "content.publish"))
             throw new HttpError(
               403,
-              "Only owners and admins can archive or restore projects.",
+              "Only owners and admins can publish, unpublish, archive or restore projects.",
             );
           const parsed = projectStateInputSchema.safeParse(
             await readJson(request),
@@ -793,7 +842,7 @@ export function createApiServer(options: Options) {
           if (!parsed.success)
             throw new HttpError(
               400,
-              "Choose draft or archived with the current project version. Publishing is not available yet.",
+              "Choose draft, published or archived with the current project version.",
             );
           json(response, 200, {
             project: await portfolio.state(

@@ -106,7 +106,7 @@ export const catalogInputs = {
       sourceUrl: url,
       externalId: optionalText(200),
       featured: z.boolean().default(false),
-      sortOrder: z.number().int().min(0).max(1000000).default(0),
+      sortOrder: z.number().int().min(0).max(1000000).default(10),
       internalNotes: optionalText(10000),
     })
     .strict()
@@ -148,6 +148,7 @@ export const catalogSummarySchema = z.object({
   updatedAt: catalogVersionSchema,
   references: z.number().int().nonnegative(),
   imageUrl: url,
+  authorCompany: optionalText(160),
 });
 export const catalogListSchema = z.object({
   records: z.array(catalogSummarySchema),
@@ -169,7 +170,7 @@ export const catalogQuerySchema = z
 export type CatalogQuery = z.infer<typeof catalogQuerySchema>;
 export const catalogStateSchema = z
   .object({
-    state: z.enum(["active", "draft", "archived"]),
+    state: z.enum(["active", "draft", "published", "archived"]),
     expectedUpdatedAt: catalogVersionSchema,
   })
   .strict();

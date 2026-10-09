@@ -18,6 +18,7 @@ import {
   projectReadCondition,
   projectEditCondition,
   projectDeletionSql,
+  projectListOrder,
   serializeProject,
 } from "../src/projects.js";
 import { projectSchema } from "@promdevs/contracts";
@@ -119,6 +120,22 @@ test("new portfolio records are drafts and identity defaults are private", () =>
   assert.equal(contributors.linkedinUrl.name, "linkedin_url");
   assert.equal(contributors.websiteUrl.notNull, false);
   assert.equal(contributors.linkedinUrl.notNull, false);
+});
+
+test("display order defaults to 10 without changing per-project skill positions", () => {
+  assert.equal(projects.sortOrder.default, 10);
+  assert.equal(reviews.sortOrder.default, 10);
+  assert.equal(projectSkills.sortOrder.default, 0);
+  const db = drizzle(async () => ({ rows: [] }));
+  const query = db
+    .select(legacyProjectFields)
+    .from(projects)
+    .orderBy(...projectListOrder())
+    .toSQL();
+  assert.match(
+    query.sql,
+    /order by "projects"\."sort_order" asc, "projects"\."featured" desc/,
+  );
 });
 
 test("project attribution and review visibility/identity have independent controls", () => {

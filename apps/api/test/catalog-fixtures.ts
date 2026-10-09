@@ -1,5 +1,6 @@
 import {
   catalogRecordSchemas,
+  reviewPublicationIssues,
   type CatalogKind,
   type CatalogInput,
   type CatalogQuery,
@@ -37,12 +38,39 @@ export class MemoryCatalog implements CatalogStore {
   }
   async list(kind: CatalogKind, { q, state, limit, offset }: CatalogQuery) {
     const rows = [...this.rows[kind].values()]
+      .filter((r) => {
+        const review = "authorName" in r;
+        const searchable = review
+          ? `${r.authorName ?? "Unnamed author"} ${r.authorCompany ?? ""} ${r.title ?? ""} ${r.rating ?? ""} ${r.source}`
+          : "name" in r
+            ? `${r.name} ${"slug" in r ? r.slug + " " + r.category : "publicName" in r ? (r.publicName ?? r.industry ?? r.clientType) : (r.contactEmail ?? "")}`
+            : "";
+        const currentState =
+          "publicationStatus" in r
+            ? r.publicationStatus
+            : "status" in r
+              ? r.status
+              : "active";
+        return (
+          (state === "all" || state === currentState) &&
+          searchable.toLowerCase().includes(q.toLowerCase())
+        );
+      })
+      .sort((a, b) => {
+        if ("sortOrder" in a && "sortOrder" in b) {
+          const placement =
+            a.sortOrder - b.sortOrder ||
+            Number(b.featured) - Number(a.featured);
+          if (placement) return placement;
+        }
+        return b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id;
+      })
       .map((r) => {
         const name =
           "name" in r
             ? r.name
             : "title" in r
-              ? r.title || r.authorName || "Untitled review"
+              ? r.authorName || "Unnamed author"
               : "Record";
         const detail =
           "category" in r
@@ -65,13 +93,9 @@ export class MemoryCatalog implements CatalogStore {
           updatedAt: r.updatedAt,
           references: kind === "skills" && this.linkedSkills.has(r.id) ? 1 : 0,
           imageUrl: "logo" in r ? r.logo : "iconUrl" in r ? r.iconUrl : null,
+          authorCompany: "authorCompany" in r ? r.authorCompany : null,
         };
-      })
-      .filter(
-        (r) =>
-          (state === "all" || state === r.state) &&
-          (r.name + " " + r.detail).toLowerCase().includes(q.toLowerCase()),
-      );
+      });
     return { records: rows.slice(offset, offset + limit), total: rows.length };
   }
   async get(kind: CatalogKind, id: number) {
@@ -180,19 +204,40 @@ export class MemoryCatalog implements CatalogStore {
     if (kind === "skills") throw new HttpError(400, "No skill state.");
     const previous = this.rows[kind].get(id);
     if (!previous) throw new HttpError(404, "Not found.");
-    if (
-      previous.updatedAt !== expected ||
-      ("publicationStatus" in previous &&
-        previous.publicationStatus === "published")
-    )
+    if (previous.updatedAt !== expected)
       throw new HttpError(409, "Record changed or read-only.");
+    if ("publicationStatus" in previous) {
+      if (
+        state === previous.publicationStatus ||
+        (state === "published" && previous.publicationStatus !== "draft") ||
+        (state === "archived" && previous.publicationStatus !== "draft")
+      )
+        throw new HttpError(409, "Invalid publication transition.");
+      const missing = reviewPublicationIssues(previous);
+      if (state === "published" && missing.length)
+        throw new HttpError(
+          400,
+          `Before publishing, complete: ${missing.join(", ")}.`,
+        );
+    }
+    const now = new Date(++this.clock).toISOString();
     const row = catalogRecordSchemas[kind].parse({
       ...previous,
       [kind === "reviews" ? "publicationStatus" : "status"]: state,
-      updatedAt: new Date(++this.clock).toISOString(),
+      ...(kind === "reviews"
+        ? { publishedAt: state === "published" ? now : null }
+        : {}),
+      updatedAt: now,
     });
     this.rows[kind].set(id, row);
-    this.audits.push(kind + ".state_changed");
+    this.audits.push(
+      kind === "reviews" &&
+        (state === "published" ||
+          ("publicationStatus" in previous &&
+            previous.publicationStatus === "published"))
+        ? `review.${state === "published" ? "published" : "unpublished"}`
+        : kind + ".state_changed",
+    );
     return structuredClone(row);
   }
   async options(q: string, clientId?: number, projectId?: number) {

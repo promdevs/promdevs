@@ -63,7 +63,7 @@ export function Services() {
       </div>
       <div className="services-list">
         {services.map((service, index) => (
-          <MotionReveal key={service.name} delayMs={index * 70}>
+          <MotionReveal key={service.name} delayMs={index * 100}>
             <article className="service-row">
               <div className="service-content">
                 <h3>{service.name}</h3>

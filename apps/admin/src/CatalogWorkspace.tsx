@@ -146,7 +146,7 @@ export function CatalogWorkspace(
               </option>
               <option value="archived">Archived</option>
               {kind === "reviews" && (
-                <option value="published">Previously published</option>
+                <option value="published">Published</option>
               )}
             </select>
           </label>
@@ -204,7 +204,9 @@ export function CatalogWorkspace(
               <thead>
                 <tr>
                   <th scope="col">
-                    {info.singular[0].toUpperCase() + info.singular.slice(1)}
+                    {kind === "reviews"
+                      ? "Author"
+                      : info.singular[0].toUpperCase() + info.singular.slice(1)}
                   </th>
                   <th scope="col">
                     {kind === "reviews"
@@ -248,7 +250,13 @@ export function CatalogWorkspace(
                           >
                             {r.name}
                           </a>
-                          {kind !== "reviews" && (
+                          {kind === "reviews" ? (
+                            r.authorCompany && (
+                              <span className="catalog-summary">
+                                {r.authorCompany}
+                              </span>
+                            )
+                          ) : (
                             <span className="catalog-summary">
                               {r.references} linked{" "}
                               {kind === "clients" ? "records" : "projects"}

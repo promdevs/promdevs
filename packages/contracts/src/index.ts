@@ -212,3 +212,5 @@ export type AdminIdentity = z.infer<typeof adminIdentitySchema>;
 export * from "./portfolio.js";
 
 export * from "./catalog.js";
+export * from "./publication.js";
+export * from "./public-portfolio.js";

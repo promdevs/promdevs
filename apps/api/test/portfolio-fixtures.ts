@@ -1,6 +1,7 @@
 import {
   adminProjectSchema,
   projectSummarySchema,
+  projectPublicationIssues,
   type AdminProject,
   type DraftProjectInput,
   type PortfolioOptions,
@@ -40,11 +41,19 @@ export class MemoryPortfolio implements PortfolioStore {
       throw new HttpError(403, "Not allowed.");
   }
   async list({ q, state, limit, offset }: PortfolioQuery) {
-    const rows = [...this.rows.values()].filter(
-      (p) =>
-        (state === "all" || p.publicationStatus === state) &&
-        `${p.title} ${p.slug}`.toLowerCase().includes(q.toLowerCase()),
-    );
+    const rows = [...this.rows.values()]
+      .filter(
+        (p) =>
+          (state === "all" || p.publicationStatus === state) &&
+          `${p.title} ${p.slug}`.toLowerCase().includes(q.toLowerCase()),
+      )
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          Number(b.featured) - Number(a.featured) ||
+          b.updatedAt.localeCompare(a.updatedAt) ||
+          b.id - a.id,
+      );
     return {
       projects: rows
         .slice(offset, offset + limit)
@@ -113,17 +122,32 @@ export class MemoryPortfolio implements PortfolioStore {
   async state(
     actor: AuthIdentity,
     id: number,
-    state: "draft" | "archived",
+    state: "draft" | "published" | "archived",
     expected: string,
   ) {
     this.authorized(actor, true);
     const row = this.rows.get(id);
     if (!row) throw new HttpError(404, "Not found.");
-    if (row.publicationStatus === "published" || row.updatedAt !== expected)
-      throw new HttpError(409, "State changed.");
+    if (row.updatedAt !== expected) throw new HttpError(409, "State changed.");
+    const previous = row.publicationStatus;
+    if (
+      state === previous ||
+      (state === "published" && previous !== "draft") ||
+      (state === "archived" && previous !== "draft")
+    )
+      throw new HttpError(409, "Invalid publication transition.");
+    const missing = projectPublicationIssues(row);
+    if (state === "published" && missing.length)
+      throw new HttpError(
+        400,
+        `Before publishing, complete: ${missing.join(", ")}.`,
+      );
     row.publicationStatus = state;
     row.updatedAt = new Date(++this.clock).toISOString();
-    this.audits.push(`project.${state === "draft" ? "restored" : "archived"}`);
+    row.publishedAt = state === "published" ? row.updatedAt : null;
+    this.audits.push(
+      `project.${state === "published" ? "published" : state === "archived" ? "archived" : previous === "published" ? "unpublished" : "restored"}`,
+    );
     return structuredClone(row);
   }
   async options() {

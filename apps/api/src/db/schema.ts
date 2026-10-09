@@ -191,7 +191,7 @@ export const projects = pgTable(
       .$type<PublicationStatus>()
       .notNull()
       .default("draft"),
-    sortOrder: integer("sort_order").notNull().default(0),
+    sortOrder: integer("sort_order").notNull().default(10),
     seoTitle: text("seo_title"),
     seoDescription: text("seo_description"),
     socialImage: text("social_image"),
@@ -319,7 +319,7 @@ export const reviews = pgTable(
       .notNull()
       .default("draft"),
     featured: boolean("featured").notNull().default(false),
-    sortOrder: integer("sort_order").notNull().default(0),
+    sortOrder: integer("sort_order").notNull().default(10),
     internalNotes: text("internal_notes"),
     ...auditColumns(),
     publishedAt: timestamp("published_at", { withTimezone: true }),

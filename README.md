@@ -94,11 +94,14 @@ environment variables, or Git.
 
 The admin now has a full-page draft project editor: title-only creation, search,
 filters, pagination, skills, clients, contributors, Markdown case studies, media,
-links, timelines, and SEO preparation. Owners/admins can archive and restore;
-editors can create/edit drafts. Publishing is disabled and existing published
-records are read-only in this editor. See [project management](docs/project-management.md).
+links, timelines, and SEO preparation. Owners/admins can publish, unpublish,
+archive and restore projects and reviews; editors can create/edit drafts.
+Published records are read-only until unpublished. Publishing validates the saved
+content, checks its version, and records an audit event. See [project management](docs/project-management.md).
 Public reads still require `publication_status = published`; `status` describes
-work progress. Password recovery, MFA, and review management remain future work.
+work progress. Password recovery and MFA remain future work. New published-only
+portfolio endpoints are documented in [publishing](docs/publishing.md); the public
+website UI has not been changed or connected to these new endpoints yet.
 Owners can use **Users** to invite people, change names/roles, disable/reactivate
 accounts, and revoke sessions. **Security** lets any signed-in user change their
 own password after confirming the current one. Editors can create/edit drafts, but cannot edit published
@@ -203,8 +206,15 @@ new draft requests allow 256 KiB. Media uses a separately bounded raw-body route
 
 Project pages fetch server-side without caching so admin changes are visible on the
 next request. Missing projects return 404; service outages on detail pages produce
-an error rather than a false 404. The homepage remains statically rendered. A public
+an error rather than a false 404. The homepage streams its published work and reviews
+independently while keeping the hero immediately available. The web uses the published-only
+`/api/portfolio/projects` and `/api/portfolio/reviews` APIs, not the legacy compatibility catalog. A public
 content cache with invalidation can be added later without changing the API contract.
+
+The client-story globe is independent of review identities and uses country-level
+coordinates only. Sample countries are labelled and available only in development;
+production displays an unmarked globe until verified countries are supplied. No database
+schema or admin changes are needed for this release. See [web portfolio notes](docs/web-portfolio.md).
 
 ## Separate Coolify Deployments
 

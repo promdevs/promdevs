@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUp, ArrowUpRight } from "lucide-react";
-import { ActionLink } from "@/components/Action";
 import { MotionReveal } from "@/components/MotionReveal";
 import { site } from "@/lib/site";
 import styles from "./Footer.module.css";
@@ -14,7 +13,8 @@ const groups: { title: string; items: FooterItem[] }[] = [
     items: [
       { label: "About us", href: "/#about" },
       { label: "Our work", href: "/projects" },
-      { label: "Client stories" },
+      { label: "Client stories", href: "/#reviews" },
+      { label: "FAQs", href: "/#faqs" },
       { label: "Journal" },
       { label: "Careers" },
     ],
@@ -51,7 +51,13 @@ const groups: { title: string; items: FooterItem[] }[] = [
   },
 ];
 
-function FooterDestination({ item }: { item: FooterItem }) {
+function FooterDestination({
+  item,
+  homePath = "/",
+}: {
+  item: FooterItem;
+  homePath?: string;
+}) {
   if (!item.href) {
     return (
       <span className={styles.unavailable} aria-disabled="true">
@@ -68,37 +74,24 @@ function FooterDestination({ item }: { item: FooterItem }) {
     </>
   );
 
-  return item.external ? (
-    <a href={item.href} className={styles.link}>
+  const isSection = item.href.startsWith("/#");
+  const href = isSection ? `${homePath}${item.href.slice(1)}` : item.href;
+
+  return item.external || isSection ? (
+    <a href={href} className={styles.link}>
       {content}
     </a>
   ) : (
-    <Link href={item.href} className={styles.link}>
+    <Link href={href} className={styles.link}>
       {content}
     </Link>
   );
 }
 
-export function Footer() {
+export function Footer({ homePath = "/" }: { homePath?: string } = {}) {
   return (
     <footer className={styles.footer}>
       <div className="shell">
-        <MotionReveal className={styles.invitation}>
-          <div>
-            <p className="eyebrow">Your next chapter</p>
-            <h2 className={styles.headline}>
-              Good things start
-              <br />
-              with a <em>conversation.</em>
-            </h2>
-            <p className={styles.invitationCopy}>
-              A rough idea. A product to improve. Let&apos;s find your next
-              step.
-            </p>
-          </div>
-          <ActionLink href="/#contact" label="Let's talk" />
-        </MotionReveal>
-
         <div className={styles.directory}>
           <MotionReveal className={styles.identity}>
             <Link href="/" className="brand" aria-label="PromDevs home">
@@ -133,7 +126,7 @@ export function Footer() {
                 <ul className={styles.list} role="list">
                   {group.items.map((item) => (
                     <li key={item.label}>
-                      <FooterDestination item={item} />
+                      <FooterDestination item={item} homePath={homePath} />
                     </li>
                   ))}
                 </ul>

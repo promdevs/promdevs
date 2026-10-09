@@ -9,7 +9,15 @@ import { ActionLink } from "@/components/Action";
 type Group = "expertise" | "work";
 const labels = { expertise: "Expertise", work: "Our Work" };
 
-function GroupContent({ group, close }: { group: Group; close: () => void }) {
+function GroupContent({
+  group,
+  close,
+  homePath,
+}: {
+  group: Group;
+  close: () => void;
+  homePath: string;
+}) {
   return group === "expertise" ? (
     <>
       <p className="nav-intro">Build, improve, and launch.</p>
@@ -17,7 +25,7 @@ function GroupContent({ group, close }: { group: Group; close: () => void }) {
         <Link
           className="nav-item"
           key={platform}
-          href="/#contact"
+          href={`${homePath}#contact`}
           onClick={close}
         >
           <span>
@@ -47,7 +55,7 @@ function GroupContent({ group, close }: { group: Group; close: () => void }) {
   );
 }
 
-export function Header() {
+export function Header({ homePath = "/" }: { homePath?: string } = {}) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Group | null>(null);
   const header = useRef<HTMLElement>(null);
@@ -125,7 +133,7 @@ export function Header() {
           className={mobile ? "mobile-group-content" : "nav-panel-wrap"}
         >
           <div className="nav-panel">
-            <GroupContent group={id} close={close} />
+            <GroupContent group={id} close={close} homePath={homePath} />
           </div>
         </div>
       )}
@@ -179,19 +187,19 @@ export function Header() {
             </span>
           </Link>
           <nav className="desktop-nav" aria-label="Main navigation">
-            <Link href="/#services" onClick={close}>
+            <Link href={`${homePath}#services`} onClick={close}>
               Services
             </Link>
             {group("expertise")}
             {group("work")}
-            <Link href="/#about" onClick={close}>
+            <Link href={`${homePath}#about`} onClick={close}>
               About
             </Link>
           </nav>
           <div className="header-actions">
             <ThemeToggle />
             <ActionLink
-              href="/#contact"
+              href={`${homePath}#contact`}
               label="Let's talk"
               className="header-cta"
               onClick={close}
@@ -222,16 +230,16 @@ export function Header() {
             className="mobile-nav"
             aria-label="Mobile navigation"
           >
-            <Link href="/#services" onClick={close}>
+            <Link href={`${homePath}#services`} onClick={close}>
               Services
             </Link>
             {group("expertise", true)}
             {group("work", true)}
-            <Link href="/#about" onClick={close}>
+            <Link href={`${homePath}#about`} onClick={close}>
               About
             </Link>
             <ActionLink
-              href="/#contact"
+              href={`${homePath}#contact`}
               label="Let's talk"
               className="mobile-contact"
               onClick={close}

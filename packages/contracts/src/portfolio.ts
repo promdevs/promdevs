@@ -245,7 +245,7 @@ export const draftProjectInputSchema = z
     githubUrl: url,
     timeline: projectTimelineSchema.nullable().default(null),
     featured: z.boolean().default(false),
-    sortOrder: z.number().int().min(0).max(1000000).default(0),
+    sortOrder: z.number().int().min(0).max(1000000).default(10),
     seoTitle: text(160),
     seoDescription: text(500),
     socialImage: image,
@@ -273,7 +273,7 @@ export const draftProjectUpdateSchema = z
   .strict();
 export const projectStateInputSchema = z
   .object({
-    state: z.enum(["draft", "archived"]),
+    state: z.enum(["draft", "published", "archived"]),
     expectedUpdatedAt: z.string().datetime({ offset: true }),
   })
   .strict();

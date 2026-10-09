@@ -35,12 +35,15 @@ import {
   MAX_PROJECT_VIDEO_BYTES,
   projectDuration,
   destinationKind,
+  projectPublicationIssues,
+  type AdminIdentity,
   type AdminProject,
   type DraftProjectInput,
   type PortfolioOptions,
 } from "@promdevs/contracts";
 import { Button } from "@promdevs/ui";
 import { api, ApiError } from "./api";
+import { PublicationPanel } from "./PublicationPanel";
 const Markdown = lazy(() => import("react-markdown"));
 const blank: DraftProjectInput = {
   ...draftProjectInputSchema.parse({ title: "New project" }),
@@ -104,12 +107,14 @@ export function ProjectEditor({
   onCreated,
   onExpired,
   onDirtyChange,
+  identity,
 }: {
   id: number | null;
   onClose: () => void;
   onCreated: (id: number) => void;
   onExpired: (notice?: string) => void;
   onDirtyChange: (dirty: boolean) => void;
+  identity: AdminIdentity;
 }) {
   const [project, setProject] = useState<AdminProject | null>(null);
   const [form, setForm] = useState<DraftProjectInput>(blank);
@@ -144,6 +149,7 @@ export function ProjectEditor({
   >({});
   const upload = useRef<XMLHttpRequest | null>(null);
   const alive = useRef(true);
+  const publicationRequest = useRef<AbortController | null>(null);
   const dirty = JSON.stringify(form) !== saved;
   const readonly = !!project && project.publicationStatus !== "draft";
   useEffect(() => {
@@ -151,6 +157,7 @@ export function ProjectEditor({
     return () => {
       alive.current = false;
       upload.current?.abort();
+      publicationRequest.current?.abort();
     };
   }, []);
   useEffect(() => {
@@ -252,6 +259,53 @@ export function ProjectEditor({
       failed(reason);
     } finally {
       if (alive.current) setBusy(false);
+    }
+  }
+  async function changePublication(state: "draft" | "published") {
+    if (
+      !project ||
+      dirty ||
+      busy ||
+      progress !== null ||
+      identity.role === "editor"
+    )
+      return;
+    if (state === "published" && projectPublicationIssues(form).length) return;
+    if (
+      !window.confirm(
+        state === "published"
+          ? `Publish "${project.title}"? Its saved public content and any enabled client identity will become available to the website.`
+          : `Unpublish "${project.title}"? It will disappear from public API responses and return to a private draft. Already cached website pages may need refreshing.`,
+      )
+    )
+      return;
+    const controller = new AbortController();
+    publicationRequest.current = controller;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const body = await api(`/portfolio/projects/${project.id}/state`, {
+        method: "POST",
+        signal: controller.signal,
+        body: JSON.stringify({ state, expectedUpdatedAt: project.updatedAt }),
+      });
+      if (controller.signal.aborted) return;
+      const next = adminProjectResponseSchema.parse(body).project;
+      const nextForm = draftOf(next);
+      setProject(next);
+      setForm(nextForm);
+      setSaved(JSON.stringify(nextForm));
+      setTagsText(nextForm.tags.join(", "));
+      setNotice(
+        state === "published"
+          ? "Project published."
+          : "Project unpublished. You can edit the draft now.",
+      );
+    } catch (reason) {
+      if (!controller.signal.aborted) failed(reason);
+    } finally {
+      if (!controller.signal.aborted && alive.current) setBusy(false);
     }
   }
   async function quickCreate() {
@@ -572,7 +626,11 @@ export function ProjectEditor({
       aria-labelledby="project-editor-title"
     >
       <div className="project-editor-heading">
-        <button className="text-link back-button" onClick={onClose}>
+        <button
+          className="text-link back-button"
+          onClick={onClose}
+          disabled={busy || progress !== null}
+        >
           <ArrowLeft size={16} aria-hidden />
           All projects
         </button>
@@ -590,7 +648,7 @@ export function ProjectEditor({
           </h1>
           <p className="muted">
             {readonly
-              ? "This record is read-only. Restore archived projects from the list before editing."
+              ? "Unpublish published projects or restore archived projects before editing."
               : "Only a title is required. Build out the details at your own pace."}
           </p>
         </div>
@@ -643,6 +701,16 @@ export function ProjectEditor({
         <p className="feedback notice" role="status">
           {notice}
         </p>
+        <PublicationPanel
+          kind="project"
+          status={project?.publicationStatus ?? "draft"}
+          saved={!!project}
+          dirty={dirty}
+          busy={busy || progress !== null}
+          canPublish={identity.role !== "editor"}
+          missing={projectPublicationIssues(form)}
+          onChange={(state) => void changePublication(state)}
+        />
         <div className="project-editor-grid">
           <nav className="editor-section-nav" aria-label="Project sections">
             {sections.map(([key, name]) => (
@@ -1604,7 +1672,7 @@ export function ProjectEditor({
               <div className="editor-section-heading">
                 <h2>Ready for later.</h2>
                 <p className="muted">
-                  Prepare search metadata and placement without publishing.
+                  Prepare search metadata and placement for the public website.
                 </p>
               </div>
               {text("seoTitle", "SEO title", { maxLength: 160 })}
@@ -1626,6 +1694,9 @@ export function ProjectEditor({
                     value={form.sortOrder}
                     onChange={(e) => set("sortOrder", Number(e.target.value))}
                   />
+                  <small>
+                    Lower numbers appear first. New projects default to 10.
+                  </small>
                 </label>
                 <label className="check">
                   <input
@@ -1637,8 +1708,8 @@ export function ProjectEditor({
                 </label>
               </div>
               <p className="editor-note">
-                Publishing is intentionally unavailable in this release. Saving
-                a draft never makes it public.
+                Saving a draft never makes it public. Owners and admins can
+                publish saved, complete projects using Website visibility above.
               </p>
             </section>
           </fieldset>

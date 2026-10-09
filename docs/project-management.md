@@ -3,14 +3,16 @@
 ## Scope
 
 API + admin only. The public website and its existing project contracts are
-unchanged. No schema migration is introduced; the existing portfolio and admin
-tables must already be applied. No live records or R2 objects are created by
+unchanged. The existing portfolio and admin tables must already be applied;
+incremental migrations below update defaults without rewriting records.
+No live records or R2 objects are created by
 builds/tests or startup.
 
 The admin uses a full-page editor with explicit **Save draft**. Only a title is
 required. Slugs, summaries, images, and case-study content can follow later.
-There is no publishing action in this release. Published and archived projects
-are read-only in this editor; owners/admins can restore archived records as drafts.
+Owners/admins can publish complete saved drafts and unpublish them to edit.
+Published and archived projects are read-only in this editor; owners/admins can
+restore archived records as drafts. See [publishing workflow](publishing.md).
 
 ## Content and relationships
 
@@ -32,6 +34,24 @@ are read-only in this editor; owners/admins can restore archived records as draf
   Elapsed duration is calculated from the start/end dates for future public use.
 - Search/placement: SEO copy, social image, featured flag, and sort order.
 
+### Display order and review identity
+
+New projects and reviews default to sort order **10**. Lower values appear first
+in administrative lists and the existing public project API. Placement is applied
+before pagination; featured status only breaks ties between equal sort values.
+Explicit zero remains valid. Existing saved values are not changed.
+
+Review lists show the author name above their optional company, rather than using
+the optional review title as the primary label. Reviews without an author display
+“Unnamed author” in the private admin. Searching still matches author, company,
+title, source, and rating. This does not change public identity visibility.
+
+`0007_display_order_defaults.sql` changes only the database defaults on
+`projects.sort_order` and `reviews.sort_order`. Generate/check migrations offline
+with `pnpm db:generate` and review status using `pnpm db:status`. Apply pending
+migrations with `pnpm db:migrate` when authorized; migration generation does not
+apply anything to the database.
+
 Quick-create/select supports basic clients and contributors without full
 management screens. These records are created immediately; their project links
 are saved with the draft. Contributors are not administrator accounts.
@@ -48,23 +68,24 @@ confirmation. Unsaved changes are not copied into browser storage.
 Every endpoint requires an active database-backed session. Writes also require
 the configured admin Origin. Owners, admins, and editors can create/edit drafts,
 quick-create related records, and upload media. Only owners/admins can archive or
-restore. The new editor does not hard-delete records or media.
+restore, publish, or unpublish. The new editor does not hard-delete records or media.
 
-| Endpoint under `/api/admin/portfolio` | Method | Purpose                                               |
-| ------------------------------------- | ------ | ----------------------------------------------------- |
-| `/options`                            | GET    | Skills, clients, and contributors                     |
-| `/projects?q=&state=&limit=&offset=`  | GET    | Search, filter, and paginate summaries                |
-| `/projects/:id`                       | GET    | Full administrative detail                            |
-| `/projects`                           | POST   | Create a title-only or expanded draft                 |
-| `/projects/:id`                       | PUT    | Save `{ project, expectedUpdatedAt }`                 |
-| `/projects/:id/state`                 | POST   | `{ state: "draft" or "archived", expectedUpdatedAt }` |
-| `/clients`                            | POST   | Quick-create a client                                 |
-| `/contributors`                       | POST   | Quick-create a contributor                            |
-| `/projects/:id/media`                 | POST   | Raw supported file bytes; matching Content-Type       |
+| Endpoint under `/api/admin/portfolio` | Method | Purpose                                                            |
+| ------------------------------------- | ------ | ------------------------------------------------------------------ |
+| `/options`                            | GET    | Skills, clients, and contributors                                  |
+| `/projects?q=&state=&limit=&offset=`  | GET    | Search, filter, and paginate summaries                             |
+| `/projects/:id`                       | GET    | Full administrative detail                                         |
+| `/projects`                           | POST   | Create a title-only or expanded draft                              |
+| `/projects/:id`                       | PUT    | Save `{ project, expectedUpdatedAt }`                              |
+| `/projects/:id/state`                 | POST   | `{ state: "draft", "published" or "archived", expectedUpdatedAt }` |
+| `/clients`                            | POST   | Quick-create a client                                              |
+| `/contributors`                       | POST   | Quick-create a contributor                                         |
+| `/projects/:id/media`                 | POST   | Raw supported file bytes; matching Content-Type                    |
 
 New shared contracts are separate from legacy/public project payloads. Existing
 `/api/admin/projects` compatibility endpoints retain their prior behavior and
-permissions; the new editor does not use them. No publish endpoint is added.
+permissions; the new editor does not use them. The state endpoint now supports
+explicit publication with content checks and an atomic audit trail.
 New draft JSON requests have a 256 KiB limit; existing JSON endpoints remain
 64 KiB. JSON bodies have a 15-second deadline. In-memory limits mean the API
 should remain a single replica until shared limiting is introduced.
@@ -106,8 +127,8 @@ invalidated during an upload, but cannot guarantee cleanup after network failure
 
 ## Deployment and verification
 
-1. Deploy API first with existing schema and R2 runtime variables. Verify
-   `ffprobe -version` in its container. No new migration or seed is required.
+1. Review/apply pending migrations, then deploy API with the existing R2 runtime
+   variables. Verify `ffprobe -version` in its container. No seed is required.
 2. Deploy admin with the updated Nginx template. Upload routes allow 50 MiB raw
    bodies and longer timeouts; normal API requests retain short proxy deadlines.
 3. Verify login and draft workflows. Upload smoke tests against a development

@@ -19,11 +19,19 @@ export async function generateMetadata({
   const project = await getProject(slug);
   if (!project) return { title: "Project Not Found — PromDevs" };
   return {
-    title: project.title,
+    title: project.seoTitle || project.title,
     alternates: { canonical: `/projects/${project.slug}` },
-    openGraph: { title: project.title, description: project.description },
-    twitter: { title: project.title, description: project.description },
-    description: project.description,
+    openGraph: {
+      title: project.seoTitle || project.title,
+      description: project.seoDescription || project.description,
+      ...(project.socialImage ? { images: [project.socialImage] } : {}),
+    },
+    twitter: {
+      title: project.seoTitle || project.title,
+      description: project.seoDescription || project.description,
+      ...(project.socialImage ? { images: [project.socialImage] } : {}),
+    },
+    description: project.seoDescription || project.description,
   };
 }
 
@@ -37,14 +45,22 @@ export default async function ProjectDetailPage({
   if (!project) notFound();
   return (
     <>
-      <Header />
+      <Header homePath="/?view=html" />
       <main id="main-content" className="shell projects-page">
         <Link href="/projects" className="text-link mb-12">
           <ChevronLeft size={16} aria-hidden /> All projects
         </Link>
         <MotionReveal entrance className="section-intro">
           <p className="eyebrow">
-            {project.category} / {project.year}
+            {[
+              project.category ||
+                project.productTypes
+                  .map((type) => type.replaceAll("_", " "))
+                  .join(" & "),
+              project.year,
+            ]
+              .filter((value) => value !== null && value !== "")
+              .join(" / ")}
           </p>
           <div>
             <h1 className="section-heading">{project.title}</h1>
@@ -70,6 +86,24 @@ export default async function ProjectDetailPage({
                   View source <ArrowUpRight aria-hidden />
                 </a>
               )}
+              {[
+                [project.appStoreUrl, "App Store"],
+                [project.playStoreUrl, "Google Play"],
+              ].map(
+                ([url, label]) =>
+                  url && (
+                    <a
+                      key={label}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-link"
+                    >
+                      {label}
+                      <ArrowUpRight aria-hidden />
+                    </a>
+                  ),
+              )}
             </div>
           </div>
         </MotionReveal>
@@ -77,7 +111,7 @@ export default async function ProjectDetailPage({
           <MotionReveal className="project-detail-cover">
             <Image
               src={project.coverImage}
-              alt={project.title + " interface"}
+              alt={project.coverAlt}
               fill
               sizes="100vw"
               className="object-contain"
@@ -86,13 +120,14 @@ export default async function ProjectDetailPage({
           </MotionReveal>
         )}
         <div className="capability-strip mb-16">
-          {project.techStack.map((tech) => (
-            <span key={tech}>{tech}</span>
+          {project.skills.map((skill) => (
+            <span key={skill.slug}>{skill.name}</span>
           ))}
         </div>
         {[
           { label: "The challenge", text: project.problem },
-          { label: "Our approach", text: project.solution },
+          { label: "Our approach", text: project.approach },
+          { label: "The solution", text: project.solution },
           { label: "The outcome", text: project.results },
         ]
           .filter((section) => section.text)
@@ -106,14 +141,14 @@ export default async function ProjectDetailPage({
           ))}
         <MotionReveal className="project-end">
           <h2 className="section-heading">
-            Your next chapter
+            Let&apos;s build
             <br />
-            starts here.
+            something great.
           </h2>
-          <ActionLink href="/#contact" label="Start a conversation" />
+          <ActionLink href="/?view=html#contact" label="Start a conversation" />
         </MotionReveal>
       </main>
-      <Footer />
+      <Footer homePath="/?view=html" />
     </>
   );
 }

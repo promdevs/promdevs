@@ -7,7 +7,8 @@
     "build": "next build --webpack && node scripts/prepare-standalone.mjs",
     "start": "node .next/standalone/apps/web/server.js",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "5.3.0",
