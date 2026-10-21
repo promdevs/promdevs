@@ -49,7 +49,7 @@ Use these settings for each application:
 | Dockerfile Location, relative to root | `deploy/api.Dockerfile`    | `deploy/admin.Dockerfile`    | `deploy/web.Dockerfile` |
 | Ports Exposes                         | `4000`                     | `80`                         | `3000`                  |
 | Domain                                | `https://api.promdevs.com` | `https://admin.promdevs.com` | `https://promdevs.com`  |
-| Container health path                 | `/health`                  | `/health`                    | `/`                     |
+| Container health path                 | `/health`                  | `/health`                    | `/health`               |
 
 Do not set Base Directory to an individual app: the Dockerfiles need the root
 workspace and shared packages. No custom install/build/start command is needed;
@@ -58,6 +58,13 @@ HTTPS proxy rather than publishing application ports on the server.
 All three images already include a HEALTHCHECK.
 The API and web runtime images install `curl`; the Alpine admin image provides
 `wget`. This also supports Coolify versions that generate their own HTTP checks.
+In Coolify's Configuration > Healthcheck, use HTTP GET, host `localhost`, the
+application's exposed port, path `/health`, expected status `200`, and a
+30-second interval. Coolify's saved check settings can override the Dockerfile;
+update existing resources as well as the image. Never point a website health
+check at `/`: rendering the dynamic homepage reads portfolio data from the API
+and database even when there are no visitors. The web and API `/health` routes
+check process liveness only and do not access the database or external services.
 See [Dockerfile deployment](https://coolify.io/docs/applications/builds/dockerfile)
 and [health checks](https://coolify.io/docs/applications/configuration/health-checks).
 
@@ -234,7 +241,7 @@ on the Hetzner host does not install them in the application container.
 
 Push the updated Dockerfiles and redeploy the affected application from that
 commit. Keep the API check on HTTP port `4000`, path `/health`; the web check
-uses port `3000`, path `/`. Do not disable monitoring just to conceal a failed
+uses port `3000`, path `/health`. Do not disable monitoring just to conceal a failed
 check. In the API container terminal, verify:
 
 ```sh
@@ -244,6 +251,19 @@ curl --fail --silent --show-error http://127.0.0.1:4000/health
 A successful response verifies liveness, not database or email readiness. If
 the new image still says the command is missing, confirm the deployed commit
 and Dockerfile Location, then rebuild without cache if necessary.
+
+## Updating an existing website health check
+
+Deploy the commit containing `apps/web/app/health/route.ts` before changing the
+live check to `/health`; the old image does not have this route. Confirm
+`curl --fail http://127.0.0.1:3000/health` inside the new web container returns
+`{"status":"ok","service":"promdevs-web"}`. Update Coolify's saved HTTP check
+to port `3000`, path `/health`, interval `30` seconds, and expected status `200`.
+Ensure the new container is created with these settings: saving configuration
+alone is not proof that the running container's Docker health check changed.
+Verify its health-check command/interval and that it remains healthy after
+multiple checks. Repeated portfolio reads should no longer follow the health
+check interval; genuine page visits will still fetch fresh published content.
 
 ## Admin loads but login/session requests return 502
 
