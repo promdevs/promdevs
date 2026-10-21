@@ -30,9 +30,11 @@ function setOrigin(event: PointerEvent<HTMLElement> | FocusEvent<HTMLElement>) {
 function ActionContent({
   label,
   loading = false,
+  opensNewTab = false,
 }: {
   label: string;
   loading?: boolean;
+  opensNewTab?: boolean;
 }) {
   const face = (filled: boolean) => (
     <span
@@ -61,7 +63,10 @@ function ActionContent({
   );
   return (
     <>
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">
+        {label}
+        {opensNewTab && " (opens in a new tab)"}
+      </span>
       {face(false)}
       {face(true)}
     </>
@@ -74,22 +79,27 @@ export function ActionLink({
   variant = "primary",
   className = "",
   onClick,
+  newTab = false,
 }: {
   href: string;
   label: string;
   variant?: "primary" | "secondary";
   className?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
+  newTab?: boolean;
 }) {
   return (
     <Link
       href={href}
+      target={newTab ? "_blank" : undefined}
+      rel={newTab ? "noopener noreferrer" : undefined}
+      prefetch={newTab ? false : undefined}
       className={`action action-${variant} ${className}`}
       onClick={onClick}
       onPointerEnter={setOrigin}
       onFocus={setOrigin}
     >
-      <ActionContent label={label} />
+      <ActionContent label={label} opensNewTab={newTab} />
     </Link>
   );
 }

@@ -22,6 +22,7 @@ export function createGlobe(
   container: HTMLElement,
   countries: WorkCountry[],
   onProject: (markers: MarkerProjection[]) => void,
+  onMarker: (code: string | null, pin?: boolean) => void = () => {},
 ): GlobeController {
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
@@ -63,10 +64,40 @@ export function createGlobe(
     depthWrite: false,
   });
   globe.add(new THREE.Points(geometry, material));
-  const points = countries.map(
-    (country) =>
-      new THREE.Vector3(...countryPoint(country.latitude, country.longitude)),
+  const dots = countries.flatMap((country, countryIndex) =>
+    country.markers.map(([latitude, longitude]) => ({
+      countryIndex,
+      point: new THREE.Vector3(...countryPoint(latitude, longitude)),
+      x: 0,
+      y: 0,
+      opacity: 0,
+    })),
   );
+  const anchors = countries.map((_, i) =>
+    dots.findIndex((dot) => dot.countryIndex === i),
+  );
+  const markerGeometry = new THREE.BufferGeometry();
+  markerGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(
+      dots.flatMap((dot) => dot.point.toArray()),
+      3,
+    ),
+  );
+  const markerMaterial = new THREE.ShaderMaterial({
+    uniforms: { dotSize: { value: 4.5 * renderer.getPixelRatio() } },
+    vertexShader: `uniform float dotSize; varying float visibility;
+      void main() { vec3 n = normalize(mat3(modelViewMatrix) * position);
+        visibility = clamp((n.z - 0.30278) / .16, 0.0, 1.0);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position * 1.015, 1.0);
+        gl_PointSize = dotSize; }`,
+    fragmentShader: `varying float visibility;
+      void main() { float r = length(gl_PointCoord - .5); if (r > .5) discard;
+        gl_FragColor = vec4(.1451, .3882, .9216, (1.0 - smoothstep(.32, .5, r)) * visibility); }`,
+    transparent: true,
+    depthWrite: false,
+  });
+  globe.add(new THREE.Points(markerGeometry, markerMaterial));
   const projections: MarkerProjection[] = countries.map((country) => ({
     code: country.code,
     x: 0,
@@ -82,7 +113,7 @@ export function createGlobe(
     reduced = false;
   let frame = 0,
     lastTime = 0,
-    yaw = -0.15,
+    yaw = 0.9,
     pitch = 0.08,
     width = 1,
     height = 1;
@@ -97,26 +128,56 @@ export function createGlobe(
   } | null = null;
   const events = new AbortController();
   const options = { signal: events.signal };
+  let highlighted: string | null = null;
 
   function draw() {
     if (disposed || !active) return;
     globe.rotation.set(pitch, yaw, 0, "XYZ");
     globe.updateMatrixWorld(true);
     renderer.render(scene, camera);
-    points.forEach((point, i) => {
-      normal.copy(point).transformDirection(globe.matrixWorld);
+    dots.forEach((dot) => {
+      normal.copy(dot.point).transformDirection(globe.matrixWorld);
       projected
-        .copy(point)
+        .copy(dot.point)
         .multiplyScalar(1.015)
         .applyMatrix4(globe.matrixWorld)
         .project(camera);
-      const marker = projections[i];
-      marker.x = ((projected.x + 1) * width) / 2;
-      marker.y = ((1 - projected.y) * height) / 2;
-      marker.opacity = markerVisibility(normal.z, camera.position.z);
+      dot.x = ((projected.x + 1) * width) / 2;
+      dot.y = ((1 - projected.y) * height) / 2;
+      dot.opacity = markerVisibility(normal.z, camera.position.z);
+    });
+    projections.forEach((marker, i) => {
+      const dot = dots[anchors[i]];
+      marker.x = dot.x;
+      marker.y = dot.y;
+      marker.opacity = dot.opacity;
       marker.side = marker.x > width / 2 ? "left" : "right";
     });
     onProject(projections);
+  }
+  function pick(event: PointerEvent, pin = false) {
+    const box = canvas.getBoundingClientRect();
+    const x = event.clientX - box.left,
+      y = event.clientY - box.top;
+    let closest = -1,
+      distance = event.pointerType === "touch" ? 22 : 12;
+    dots.forEach((dot, i) => {
+      const d = Math.hypot(dot.x - x, dot.y - y);
+      if (dot.opacity > 0.1 && d < distance) {
+        closest = i;
+        distance = d;
+      }
+    });
+    const code =
+      closest < 0 ? null : countries[dots[closest].countryIndex].code;
+    if (closest >= 0) {
+      anchors[dots[closest].countryIndex] = closest;
+      draw();
+    }
+    if (highlighted !== code || pin) {
+      highlighted = code;
+      onMarker(code, pin);
+    }
   }
   function stopFrame() {
     cancelAnimationFrame(frame);
@@ -168,7 +229,11 @@ export function createGlobe(
     }
   }
   function move(event: PointerEvent) {
-    if (!drag || drag.id !== event.pointerId) return;
+    if (!drag) {
+      if (event.pointerType !== "touch") pick(event);
+      return;
+    }
+    if (drag.id !== event.pointerId) return;
     const dx = event.clientX - drag.x,
       dy = event.clientY - drag.y;
     // Let vertical gestures scroll the page; claim only intentional horizontal drags.
@@ -215,6 +280,8 @@ export function createGlobe(
     if (!box.width || !box.height) return;
     width = box.width;
     height = box.height;
+    markerMaterial.uniforms.dotSize.value =
+      (width < 400 ? 3 : 4.5) * renderer.getPixelRatio();
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
@@ -224,7 +291,24 @@ export function createGlobe(
   resizeObserver.observe(container);
   canvas.addEventListener("pointerdown", down, options);
   canvas.addEventListener("pointermove", move, options);
-  canvas.addEventListener("pointerup", endDrag, options);
+  canvas.addEventListener(
+    "pointerup",
+    (event) => {
+      const tap =
+        drag && Math.hypot(event.clientX - drag.x, event.clientY - drag.y) < 6;
+      endDrag();
+      if (tap) pick(event, true);
+    },
+    options,
+  );
+  canvas.addEventListener(
+    "pointerleave",
+    () => {
+      highlighted = null;
+      onMarker(null);
+    },
+    options,
+  );
   canvas.addEventListener("pointercancel", endDrag, options);
   canvas.addEventListener("lostpointercapture", endDrag, options);
   container.parentElement?.addEventListener("keydown", keys, options);
@@ -263,6 +347,8 @@ export function createGlobe(
       resizeObserver.disconnect();
       geometry.dispose();
       material.dispose();
+      markerGeometry.dispose();
+      markerMaterial.dispose();
       shellGeometry.dispose();
       shellMaterial.dispose();
       renderer.dispose();

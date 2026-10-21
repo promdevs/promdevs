@@ -23,7 +23,8 @@ export async function Reviews() {
       <div className="stories-layout">
         <MotionReveal className="stories-globe">
           <p className="globe-reach">
-            <strong>100+ projects</strong> across <strong>7 countries.</strong>
+            <strong>100+ projects</strong> across{" "}
+            <strong>{countries.length} countries &amp; territories.</strong>
           </p>
           <ClientGlobe countries={countries} />
         </MotionReveal>

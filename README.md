@@ -70,6 +70,14 @@ After changing contracts, restart `pnpm dev` to rebuild the shared package.
 
 Never place credentials in `VITE_*` or `NEXT_PUBLIC_*` variables.
 
+### Call Booking
+
+The contact section offers a 30-minute discovery call alongside the existing
+message form. Its public booking URL is `site.bookingUrl` in
+`apps/web/lib/site.ts`. It opens Cal.com in a new tab; there is no calendar embed,
+third-party scheduling script, or extra environment variable. Availability and
+booking questions are managed in Cal.com. Message delivery remains API-owned.
+
 ### Enable Your Administrator
 
 Admin login uses `admin_users` and persistent `admin_sessions`. The API enforces

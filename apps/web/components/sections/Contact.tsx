@@ -2,9 +2,11 @@
 
 import { FormEvent, useState } from "react";
 import { MotionReveal } from "@/components/MotionReveal";
-import { ActionButton } from "@/components/Action";
+import { ActionButton, ActionLink } from "@/components/Action";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { site } from "@/lib/site";
+import styles from "./Contact.module.css";
 
 type Status = "idle" | "success" | "error";
 
@@ -79,16 +81,27 @@ export function Contact() {
           on your mind?
         </h2>
         <p className="intro-copy">
-          A new idea. A product to improve. A team to build. Tell us what
-          you&apos;re thinking, and let&apos;s find a way forward.
+          A new idea. A product to improve. A team to build. Talk it through on
+          a call, or send us a few details.
         </p>
+        <div className={styles.booking}>
+          <ActionLink href={site.bookingUrl} label="Book a call" newTab />
+          <p className={styles.bookingNote}>
+            30-minute video call. Pick your time.
+          </p>
+        </div>
       </MotionReveal>
       <MotionReveal delayMs={100}>
         <form
           className="contact-form"
           onSubmit={onSubmit}
           aria-busy={submitting}
+          aria-labelledby="contact-form-title"
         >
+          <div className={styles.formIntro}>
+            <h3 id="contact-form-title">Or send a message.</h3>
+            <p>A few details are all we need to get started.</p>
+          </div>
           <fieldset disabled={submitting}>
             <div className="form-pair">
               <div className="field">

@@ -3,11 +3,12 @@ export interface WorkCountry {
   name: string;
   latitude: number;
   longitude: number;
+  markers: number[][];
   detail?: string;
 }
 
-// Replace this input with verified aggregate location data, not review attribution.
-// An empty input intentionally makes no claims about countries or client counts.
+// Owner-supplied country-level activity. Spread points are illustrative, not addresses.
 export function getWorkCountries(): WorkCountry[] {
-  return [];
+  return locations;
 }
+import locations from "./country-markers.json";
