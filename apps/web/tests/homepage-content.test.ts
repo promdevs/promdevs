@@ -4,6 +4,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FAQs } from "../components/sections/FAQs";
 import { faqs } from "../data/faqs";
+import { ActionLink } from "../components/Action";
+import { site } from "../lib/site";
 
 test("FAQs are server-rendered native disclosures with all answers available without JavaScript", () => {
   const html = renderToStaticMarkup(createElement(FAQs));
@@ -17,4 +19,32 @@ test("FAQs are server-rendered native disclosures with all answers available wit
   }
   assert.ok(html.includes("Store approval remains subject to each platform"));
   assert.ok(!html.includes("Your next chapter"));
+});
+
+test("call booking is a server-rendered secure link with a new-tab announcement", () => {
+  const html = renderToStaticMarkup(
+    createElement(ActionLink, {
+      href: site.bookingUrl,
+      label: "Book a call",
+      newTab: true,
+    }),
+  );
+  assert.ok(html.includes('href="https://cal.com/promdevs/discovery-call"'));
+  assert.ok(html.includes('target="_blank"'));
+  assert.ok(html.includes('rel="noopener noreferrer"'));
+  assert.ok(html.includes("Book a call (opens in a new tab)"));
+  assert.ok(!html.includes("<iframe"));
+  assert.ok(!html.includes("<script"));
+});
+
+test("existing internal action links keep their same-tab navigation", () => {
+  const html = renderToStaticMarkup(
+    createElement(ActionLink, {
+      href: "/projects",
+      label: "View our work",
+    }),
+  );
+  assert.ok(html.includes('href="/projects"'));
+  assert.ok(!html.includes('target="_blank"'));
+  assert.ok(!html.includes("opens in a new tab"));
 });

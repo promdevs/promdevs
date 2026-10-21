@@ -291,16 +291,49 @@ test("project detail uses published routes, distinguishes 404 from outage, and e
   );
 });
 
-test("no unverified country claims appear in any environment", () => {
+test("only owner-supplied country and territory markers appear in every environment", () => {
   const env: Record<string, string | undefined> = process.env;
   const original = env.NODE_ENV;
   try {
     env.NODE_ENV = "production";
-    assert.deepEqual(getWorkCountries(), []);
+    const countries = getWorkCountries();
+    assert.deepEqual(
+      countries.map((c) => [c.code, c.markers.length]),
+      [
+        ["US", 50],
+        ["GB", 10],
+        ["AU", 3],
+        ["IN", 2],
+        ["DE", 1],
+        ["PR", 1],
+        ["FR", 1],
+        ["SI", 1],
+        ["NG", 1],
+        ["AE", 1],
+      ],
+    );
+    assert.equal(
+      countries.reduce((n, c) => n + c.markers.length, 0),
+      71,
+    );
+    for (const country of countries) {
+      assert.equal(
+        new Set(country.markers.map((p) => p.join(","))).size,
+        country.markers.length,
+      );
+      assert.deepEqual(country.markers[0], [
+        country.latitude,
+        country.longitude,
+      ]);
+      for (const [lat, lon] of country.markers) {
+        assert.ok(Number.isFinite(lat) && lat >= -90 && lat <= 90);
+        assert.ok(Number.isFinite(lon) && lon >= -180 && lon <= 180);
+      }
+    }
     env.NODE_ENV = "test";
-    assert.deepEqual(getWorkCountries(), []);
+    assert.deepEqual(getWorkCountries(), countries);
     env.NODE_ENV = "development";
-    assert.deepEqual(getWorkCountries(), []);
+    assert.deepEqual(getWorkCountries(), countries);
   } finally {
     if (original === undefined) delete env.NODE_ENV;
     else env.NODE_ENV = original;

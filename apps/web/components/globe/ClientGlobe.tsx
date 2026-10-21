@@ -71,7 +71,16 @@ export function ClientGlobe({ countries }: { countries: WorkCountry[] }) {
       try {
         const { createGlobe } = await import("./globe-scene");
         if (disposed) return;
-        controller.current = createGlobe(mount!, countries, project);
+        controller.current = createGlobe(
+          mount!,
+          countries,
+          project,
+          (code, pin) => {
+            if (disposed) return;
+            if (pin) pinned.current = pinned.current === code ? null : code;
+            setSelected(pin ? pinned.current : (code ?? pinned.current));
+          },
+        );
         theme();
         motion();
         sync();
@@ -171,7 +180,7 @@ export function ClientGlobe({ countries }: { countries: WorkCountry[] }) {
           Drag horizontally or use the arrow keys to rotate. Rotation pauses
           while focused.
           {countries.length > 0 &&
-            " Blue markers represent verified countries we have worked with, independently of the reviews."}
+            " Blue dots illustrate activity across the countries and territories we have worked with. They are representative locations, not client addresses, and are independent of the reviews."}
         </p>
         <Image
           src="/images/globe-poster.svg"

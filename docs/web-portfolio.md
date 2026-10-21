@@ -30,12 +30,13 @@ This avoids depending on React's streaming reveal scripts for visible content.
 ## Country globe
 
 The globe never associates a country with a review, client, or project. Country
-input is `WorkCountry[]` with `code`, `name`, `latitude`, `longitude`, and optional
-`detail`; coordinates
-represent a country, not a person or business address. Every environment currently
-receives an empty array. The owner-provided summary above the globe reads
-"100+ projects across 7 countries." It is independent of the marker input; no
-coordinates, per-country counts, or review associations are inferred from it.
+input is `WorkCountry[]` with `code`, `name`, `latitude`, `longitude`, `markers`, and
+optional `detail`. The owner supplied ten countries/territories with 71 illustrative
+points: US 50, United Kingdom 10, Australia 3, India 2, and one each for Germany,
+Puerto Rico, France, Slovenia, Nigeria, and United Arab Emirates. Points are spread within geographic
+boundaries, not client addresses or a count of projects. The summary reads
+"100+ projects across 10 countries & territories." The place total is derived from
+the input; no review associations or per-country project counts are inferred.
 
 There are no sample countries or development labels. Replace the server-side
 `apps/web/data/countries.ts` data source with a verified
@@ -48,8 +49,10 @@ and suspends offscreen and in background tabs. One revolution takes approximatel
 interaction resumes it. Pointer drag is bounded vertically. Touch gestures claim only
 horizontal dragging, preserving vertical page scrolling. Arrow keys rotate the focused
 globe. Reduced motion removes automatic rotation. Loading/WebGL failure/no-JavaScript
-uses the local static poster. Blue marker buttons have 44px targets; their compact notes
-track the projected surface point and fade before it rotates behind the globe.
+uses the local static poster, including the same representative markers and initial
+orientation. Canvas hit-testing lets any dot anchor a country note, with one 44px
+keyboard-accessible country button per place rather than 71 overlapping controls.
+Compact notes track the selected surface point and fade before it rotates behind the globe.
 There is no separate location panel, country list, or play/pause control.
 
 See `apps/web/data/GLOBE-LICENSE.md` for geographic asset provenance and regeneration.

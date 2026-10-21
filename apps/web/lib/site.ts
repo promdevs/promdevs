@@ -1,6 +1,7 @@
 export const site = {
   name: "PromDevs",
   url: "https://www.promdevs.com",
+  bookingUrl: "https://cal.com/promdevs/discovery-call",
   title: "PromDevs | Web, Mobile & AI Product Studio",
   description:
     "PromDevs designs and builds web apps, mobile apps, and AI products for founders and brands, from new ideas to improving existing products.",
