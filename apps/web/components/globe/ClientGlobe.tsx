@@ -4,8 +4,18 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { WorkCountry } from "@/data/countries";
 import type { GlobeController, MarkerProjection } from "./globe-scene";
+import {
+  globeUsesDarkPalette,
+  type GlobeAppearance,
+} from "@/lib/globe-appearance";
 
-export function ClientGlobe({ countries }: { countries: WorkCountry[] }) {
+export function ClientGlobe({
+  countries,
+  appearance = "auto",
+}: {
+  countries: WorkCountry[];
+  appearance?: GlobeAppearance;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const controller = useRef<GlobeController | null>(null);
@@ -39,7 +49,10 @@ export function ClientGlobe({ countries }: { countries: WorkCountry[] }) {
     };
     const theme = () =>
       controller.current?.setTheme(
-        document.documentElement.classList.contains("dark"),
+        globeUsesDarkPalette(
+          appearance,
+          document.documentElement.classList.contains("dark"),
+        ),
       );
     const motion = () => controller.current?.setReduced(reduced.matches);
     const project = (positions: MarkerProjection[]) => {
@@ -156,12 +169,13 @@ export function ClientGlobe({ countries }: { countries: WorkCountry[] }) {
       controller.current = null;
       delete node.dataset.ready;
     };
-  }, [countries]);
+  }, [countries, appearance]);
 
   return (
     <div
       ref={root}
       className="client-globe"
+      data-appearance={appearance}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           pinned.current = null;

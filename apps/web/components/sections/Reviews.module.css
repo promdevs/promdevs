@@ -1,0 +1,96 @@
+.section {
+  --paper: #fff;
+  --ink: #171c25;
+  --muted: #586170;
+  --line: rgb(23 28 37 / 0.16);
+  --stories-accent: #2563eb;
+  --stories-note: rgb(255 255 255 / 0.97);
+  --stories-note-shadow: 0 8px 28px rgb(23 28 37 / 0.08);
+  --stories-poster-filter: none;
+  --stories-halo-opacity: 0.45;
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  color: var(--ink);
+  background: var(--paper);
+  color-scheme: light;
+}
+
+:global(.dark) .section {
+  --paper: #000;
+  --ink: #f5f3ee;
+  --muted: #afb3be;
+  --line: rgb(225 228 237 / 0.17);
+  --stories-accent: #719bff;
+  --stories-note: rgb(16 16 16 / 0.97);
+  --stories-note-shadow: 0 8px 28px rgb(0 0 0 / 0.2);
+  --stories-poster-filter: brightness(0) invert(0.88);
+  --stories-halo-opacity: 1;
+  color-scheme: dark;
+}
+
+.inner {
+  position: relative;
+}
+
+.section :global(.globe-art) {
+  isolation: isolate;
+}
+
+/* The live opaque sphere occludes this halo, leaving a blue crescent at its limb. */
+.section :global(.globe-art)::before {
+  content: "";
+  position: absolute;
+  inset: 2%;
+  z-index: -2;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 145deg,
+    transparent 0deg,
+    rgb(37 99 235 / 0.42) 55deg,
+    rgb(37 99 235 / 0.72) 105deg,
+    rgb(37 99 235 / 0.2) 185deg,
+    transparent 240deg
+  );
+  filter: blur(18px);
+  opacity: var(--stories-halo-opacity);
+  pointer-events: none;
+}
+
+/* Match the scene's surface before WebGL loads or if it is unavailable. */
+.section :global(.globe-art)::after {
+  content: "";
+  position: absolute;
+  inset: 4.3%;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--paper);
+  pointer-events: none;
+}
+
+.section.section :global(.globe-poster) {
+  filter: var(--stories-poster-filter);
+}
+
+.section.section :global(.globe-marker-note) {
+  color: var(--ink);
+  background: var(--stories-note);
+  box-shadow: var(--stories-note-shadow);
+}
+
+.section :global(.globe-reach strong:first-child),
+.section :global(.quote-source) {
+  color: var(--stories-accent);
+}
+
+.section :global(.review-arrows button:hover) {
+  color: var(--stories-accent);
+  border-color: var(--stories-accent);
+  background: rgb(37 99 235 / 0.1);
+}
+
+@media (max-width: 899px) {
+  .section :global(.globe-art)::before {
+    filter: blur(14px);
+  }
+}

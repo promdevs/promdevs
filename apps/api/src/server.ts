@@ -13,6 +13,7 @@ import {
   catalogStateSchema,
   ADMIN_PASSWORD_MIN_LENGTH,
   contactSchema,
+  CONTACT_BODY_BYTES,
   loginSchema,
   projectInputSchema,
   adminAccountSchema,
@@ -31,6 +32,7 @@ import {
   quickContributorInputSchema,
   publicPortfolioQuerySchema,
 } from "@promdevs/contracts";
+import { validateContactAttachments } from "./email/contact-attachments.js";
 import { sessionCookie, sessionToken } from "./auth.js";
 import { Authentication } from "./access-control/authentication.js";
 import type { AuthStore } from "./access-control/auth-store.js";
@@ -217,7 +219,9 @@ export function createApiServer(options: Options) {
       }
       if (method === "POST" && pathname === "/api/contact") {
         limited(`contact:${ip}`, 5);
-        const parsed = contactSchema.safeParse(await readJson(request));
+        const parsed = contactSchema.safeParse(
+          await readJson(request, CONTACT_BODY_BYTES),
+        );
         if (!parsed.success)
           throw new HttpError(
             400,
@@ -225,6 +229,7 @@ export function createApiServer(options: Options) {
           );
         if (parsed.data.company.trim())
           throw new HttpError(400, "Invalid submission.");
+        validateContactAttachments(parsed.data.attachments);
         await options.sendEmail(parsed.data);
         json(response, 200, { message: "Thanks, your message has been sent." });
         return;

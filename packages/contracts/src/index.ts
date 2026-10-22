@@ -36,16 +36,7 @@ const imageUrl = z
   .optional()
   .transform((value) => value || null);
 
-export const contactSchema = z
-  .object({
-    name: z.string().trim().min(1, "Name is required").max(100),
-    email: z.string().trim().email("A valid email is required").max(320),
-    subject: z.string().trim().min(1, "Subject is required").max(150),
-    message: z.string().trim().min(1, "Message is required").max(5000),
-    company: z.string().max(200).optional().default(""),
-  })
-  .strict();
-export type ContactInput = z.infer<typeof contactSchema>;
+export * from "./contact.js";
 
 export const projectInputSchema = z
   .object({

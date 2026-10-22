@@ -40,7 +40,7 @@ export function createGlobe(
   const globe = new THREE.Group();
   scene.add(globe);
   const shellGeometry = new THREE.SphereGeometry(0.998, 48, 32);
-  const shellMaterial = new THREE.MeshBasicMaterial({ color: 0xfafafa });
+  const shellMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
   globe.add(new THREE.Mesh(shellGeometry, shellMaterial));
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
@@ -335,8 +335,8 @@ export function createGlobe(
       schedule();
     },
     setTheme(dark) {
-      shellMaterial.color.set(dark ? 0x0c0c0c : 0xfafafa);
-      material.uniforms.ink.value.set(dark ? 0xc4c4c4 : 0x737373);
+      shellMaterial.color.set(dark ? 0x000000 : 0xffffff);
+      material.uniforms.ink.value.set(dark ? 0xe1e4ed : 0x737373);
       draw();
     },
     dispose() {

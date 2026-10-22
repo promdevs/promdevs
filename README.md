@@ -74,9 +74,24 @@ Never place credentials in `VITE_*` or `NEXT_PUBLIC_*` variables.
 
 The contact section offers a 30-minute discovery call alongside the existing
 message form. Its public booking URL is `site.bookingUrl` in
-`apps/web/lib/site.ts`. It opens Cal.com in a new tab; there is no calendar embed,
-third-party scheduling script, or extra environment variable. Availability and
-booking questions are managed in Cal.com. Message delivery remains API-owned.
+`apps/web/lib/site.ts`. With JavaScript, the contact area has "Send a message" and "Book a call" tabs.
+The latter shows an inline calendar using Cal.com's official React embed. Form drafts
+and an already-opened calendar are preserved when switching tabs. The scheduling
+module and third-party script load only after a visitor opens it. The embed
+follows the site's theme without reloading an in-progress booking. Loading,
+retry, and direct-link recovery states are included; without JavaScript the
+separate fallback link opens the public Cal.com page. No scheduling credentials or extra
+environment variables are needed. Availability and booking questions remain
+managed in Cal.com; message delivery remains API-owned.
+
+The message form accepts up to three optional PDF, PNG, JPG, or WebP attachments,
+with a combined 3 MiB limit. Shared contracts enforce file counts, base64 encoding,
+filenames, and size; the API additionally verifies file signatures, MIME types, and
+extensions before passing attachments to Resend. No public upload bucket or database
+record is created. Existing honeypot and per-IP limits still apply. Request bodies are
+bounded to 4 MiB + 64 KiB; other API routes keep their smaller limits. Without email
+configuration the TODO log records attachment names/types, not file contents.
+Deploy both API and web changes together; no migration or new env vars are needed.
 
 ### Enable Your Administrator
 

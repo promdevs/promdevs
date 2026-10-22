@@ -1,5 +1,5 @@
 import { getSelectedProjects } from "@/lib/api";
-import { SelectedWorkRail } from "@/components/SelectedWorkRail";
+import { SelectedWorkGrid } from "@/components/SelectedWorkGrid";
 import { MotionReveal } from "@/components/MotionReveal";
 
 export async function Projects() {
@@ -23,7 +23,7 @@ export async function Projects() {
           details that make a product feel right.
         </p>
       </MotionReveal>
-      <SelectedWorkRail projects={projects} />
+      <SelectedWorkGrid projects={projects} />
     </section>
   );
 }
