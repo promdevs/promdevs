@@ -5,7 +5,6 @@ import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/sections/Hero";
 import { AITools } from "@/components/sections/AITools";
 import { Services } from "@/components/sections/Services";
-import { About } from "@/components/sections/About";
 import { Contact } from "@/components/sections/Contact";
 import { FAQs } from "@/components/sections/FAQs";
 import { site } from "@/lib/site";
@@ -77,7 +76,6 @@ export default async function HomePage({
             </Suspense>
           </>
         )}
-        <About />
         <FAQs />
         <Contact />
       </main>

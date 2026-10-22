@@ -1,11 +1,8 @@
 import { Resend } from "resend";
 
-export type ContactEmailInput = {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-};
+import type { ContactInput } from "@promdevs/contracts";
+
+export type ContactEmailInput = Omit<ContactInput, "company">;
 
 export async function sendContactEmail(payload: ContactEmailInput) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -20,7 +17,13 @@ export async function sendContactEmail(payload: ContactEmailInput) {
   if (!apiKey || !toEmail) {
     console.info(
       "[TODO] Configure RESEND_API_KEY and CONTACT_TO_EMAIL. Contact payload:",
-      payload,
+      {
+        ...payload,
+        attachments: payload.attachments?.map(({ filename, contentType }) => ({
+          filename,
+          contentType,
+        })),
+      },
     );
     return {
       ok: true,
@@ -34,6 +37,13 @@ export async function sendContactEmail(payload: ContactEmailInput) {
     from: from,
     to: to,
     replyTo: payload.email,
+    attachments: payload.attachments?.map(
+      ({ filename, content, contentType }) => ({
+        filename,
+        content,
+        contentType,
+      }),
+    ),
     subject: `[PromDevs Contact] ${payload.subject}`,
     text: `Name: ${payload.name}\nEmail: ${payload.email}\n\nMessage:\n${payload.message}`,
   });

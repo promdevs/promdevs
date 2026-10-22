@@ -1,0 +1,80 @@
+.calendar {
+  position: relative;
+  min-width: 0;
+  min-height: 640px;
+}
+
+.host {
+  width: 100%;
+  min-width: 0;
+}
+
+.host iframe {
+  display: block;
+  max-width: 100%;
+  border: 0;
+}
+
+.feedback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  pointer-events: none;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+}
+
+.feedback p {
+  max-width: 340px;
+}
+.spinner {
+  color: #2563eb;
+  animation: turn 1.2s linear infinite;
+}
+.recovery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  pointer-events: auto;
+}
+.recovery button,
+.recovery a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.recovery button:focus-visible,
+.recovery a:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+}
+.calendar[data-state="error"] .host {
+  visibility: hidden;
+}
+.calendar[data-state="slow"] .feedback {
+  position: relative;
+  min-height: 140px;
+}
+
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

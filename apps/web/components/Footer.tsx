@@ -11,7 +11,7 @@ const groups: { title: string; items: FooterItem[] }[] = [
   {
     title: "Studio",
     items: [
-      { label: "About us", href: "/#about" },
+      { label: "About us" },
       { label: "Our work", href: "/projects" },
       { label: "Client stories", href: "/#reviews" },
       { label: "FAQs", href: "/#faqs" },

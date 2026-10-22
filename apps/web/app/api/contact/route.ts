@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { contactSchema } from "@promdevs/contracts";
+import { contactSchema, CONTACT_BODY_BYTES } from "@promdevs/contracts";
 import { apiUrl } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       const { value, done } = await reader.read();
       if (done) break;
       length += value.byteLength;
-      if (length > 64 * 1024) {
+      if (length > CONTACT_BODY_BYTES) {
         await reader.cancel();
         return NextResponse.json(
           { error: "Request is too large." },

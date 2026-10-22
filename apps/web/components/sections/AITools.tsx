@@ -2,19 +2,12 @@ import { MotionReveal } from "@/components/MotionReveal";
 import { BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import styles from "./AITools.module.css";
-
-const tools = [
-  { name: "Replit", logo: "replit" },
-  { name: "Lovable", logo: "lovable" },
-  { name: "Claude", logo: "claude", style: styles.serif },
-  { name: "Codex", logo: "codex", style: styles.mono },
-  { name: "Base44", logo: "base44" },
-  { name: "Cursor", logo: "cursor" },
-];
+import { studioTools } from "@/data/studio-tools";
+import { ToolMarquee } from "@/components/ToolMarquee";
 
 export function AITools() {
   return (
-    <aside className={styles.band} aria-label="AI tools we work with">
+    <aside className={styles.band} aria-label="Tools we work with">
       <div className="shell">
         <MotionReveal className={styles.inner}>
           <div className={styles.intro}>
@@ -26,25 +19,39 @@ export function AITools() {
               <span>Certified Lovable &amp; Replit expert</span>
             </p>
           </div>
-          <ul className={styles.tools} role="list">
-            {tools.map((tool) => (
-              <li
-                key={tool.name}
-                className={`${styles.tool} ${tool.style ?? ""}`}
+          <ToolMarquee>
+            {[false, true].map((duplicate) => (
+              <ul
+                className={styles.tools}
+                role="list"
+                key={String(duplicate)}
+                aria-hidden={duplicate || undefined}
               >
-                <Image
-                  src={`/assets/tools/${tool.logo}.svg`}
-                  alt=""
-                  aria-hidden="true"
-                  width={28}
-                  height={28}
-                  className={styles.logo}
-                  unoptimized
-                />
-                <span>{tool.name}</span>
-              </li>
+                {studioTools.map((tool) => (
+                  <li
+                    key={tool.name}
+                    className={`${styles.tool} ${"typography" in tool ? styles[tool.typography] : ""}`}
+                  >
+                    <Image
+                      src={`/assets/tools/${tool.logo}`}
+                      alt=""
+                      aria-hidden="true"
+                      width={"wordmark" in tool ? 65 : 28}
+                      height={28}
+                      loading="eager"
+                      className={`${styles.logo} ${"original" in tool ? styles.originalLogo : ""} ${"wordmark" in tool ? styles.wordmark : ""}`}
+                      unoptimized
+                    />
+                    <span
+                      className={"wordmark" in tool ? "sr-only" : undefined}
+                    >
+                      {tool.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             ))}
-          </ul>
+          </ToolMarquee>
         </MotionReveal>
       </div>
     </aside>

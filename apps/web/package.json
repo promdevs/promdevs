@@ -11,9 +11,11 @@
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
+    "@calcom/embed-react": "1.5.3",
     "@fontsource-variable/dm-sans": "5.3.0",
     "@fontsource-variable/space-grotesk": "5.3.0",
     "@next/third-parties": "16.3.8",
+    "@promdevs/contracts": "workspace:*",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "1.46.0",
@@ -24,8 +26,7 @@
     "server-only": "0.0.1",
     "sonner": "2.0.8",
     "tailwind-merge": "3.7.0",
-    "three": "0.186.0",
-    "@promdevs/contracts": "workspace:*"
+    "three": "0.186.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",

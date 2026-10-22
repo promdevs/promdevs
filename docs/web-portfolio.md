@@ -1,7 +1,7 @@
 # Public work and client stories
 
 The homepage order is Hero, AI tools, What We Do, Selected Work, Client Stories,
-About, FAQs, Contact. Empty or unavailable published collections hide their homepage
+FAQs, Contact. Empty or unavailable published collections hide their homepage
 section; there is no fallback portfolio or fabricated testimonial.
 
 ## Content selection
@@ -27,7 +27,34 @@ Without JavaScript, a noscript refresh opens `/?view=html`, the same homepage wi
 both collections resolved before returning HTML. It retains the `/` canonical.
 This avoids depending on React's streaming reveal scripts for visible content.
 
+## Selected work presentation
+
+Featured projects use compact, unboxed portfolio tiles: three columns on large
+screens, two below 1100px, and one below 700px. A collection of two uses a narrower
+two-column layout; a single tile is capped at 480px. Covers reserve a 16:10 area
+with a quiet product-type label, then a two-line-maximum project name, small arrow,
+and a one-line summary. There are no service chips, year rows, or per-card footers.
+Each project is one keyboard-accessible link, with its complete title and summary
+still rendered in HTML. Failed covers retain a quiet unavailable-preview message.
+Entry reveals and subtle image/arrow hover effects respect reduced motion. A thin
+SVG border runner appears on fine-pointer hover and keyboard focus, becoming a
+static blue outline with reduced motion without changing the tile dimensions.
+There is no pinned stage, horizontal progression, scroll controller, or carousel state;
+every project is accessible through ordinary page scrolling, including without JS.
+The project listing, reviews, and other homepage sections are unchanged.
+
 ## Country globe
+
+Client Stories follows the page theme: solid white with graphite text in light
+mode, and true black (`#000`) with ivory text in dark mode. The globe's opaque
+surface uses the same true black, avoiding a blue/purple tint. This section has no
+background grain, stippling, or dot pattern; only the globe itself is dotted. The
+static CSS blue crescent remains behind the globe, softened in light mode. The
+existing shell keeps content aligned. The globe follows the page theme without
+recreating the scene or resetting rotation. The static poster, marker labels,
+review controls, and globe surface use the same palette, including before JavaScript
+and if WebGL fails. The halo does not intercept pointer events or add animation work.
+Other sections retain their existing texture and themes.
 
 The globe never associates a country with a review, client, or project. Country
 input is `WorkCountry[]` with `code`, `name`, `latitude`, `longitude`, `markers`, and
@@ -62,7 +89,7 @@ See `apps/web/data/GLOBE-LICENSE.md` for geographic asset provenance and regener
 The homepage has six native HTML disclosures before Contact. Questions and answers
 are server-rendered and work without JavaScript. The repeated footer invitation has
 been removed; its directory includes homepage links to Client Stories and FAQs.
-Shared shell edges align the section introductions and About content.
+Shared shell edges align section introductions. The former About/Why PromDevs section is removed; About navigation is no longer linked to a missing section. Contact has a centered heading and description above a shared bordered workspace. Keyboard-accessible message/calendar tabs sit in a left sidebar on desktop and above the active interface on smaller screens. Drafts and opened calendars remain mounted across tab changes.
 
 ## Checks
 
@@ -70,4 +97,4 @@ Run `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`. Web tests use 
 fetch fixtures and never connect to the database, upload media, or send email. Browser
 checks should use a separate fixture API and include zero/one/multiple records,
 anonymous attribution, long quotes, both themes, no JS, unavailable WebGL, reduced
-motion, and mobile scrolling. Deploy the web app only; no migration is required.
+motion, and mobile scrolling. Contact attachments require deploying both the API and web app; no migration is required.

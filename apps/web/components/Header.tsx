@@ -192,9 +192,6 @@ export function Header({ homePath = "/" }: { homePath?: string } = {}) {
             </Link>
             {group("expertise")}
             {group("work")}
-            <Link href={`${homePath}#about`} onClick={close}>
-              About
-            </Link>
           </nav>
           <div className="header-actions">
             <ThemeToggle />
@@ -235,9 +232,6 @@ export function Header({ homePath = "/" }: { homePath?: string } = {}) {
             </Link>
             {group("expertise", true)}
             {group("work", true)}
-            <Link href={`${homePath}#about`} onClick={close}>
-              About
-            </Link>
             <ActionLink
               href={`${homePath}#contact`}
               label="Let's talk"

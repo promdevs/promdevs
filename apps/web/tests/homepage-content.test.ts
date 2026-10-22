@@ -4,7 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FAQs } from "../components/sections/FAQs";
 import { faqs } from "../data/faqs";
-import { ActionLink } from "../components/Action";
+import { ActionButton, ActionLink } from "../components/Action";
 import { site } from "../lib/site";
 
 test("FAQs are server-rendered native disclosures with all answers available without JavaScript", () => {
@@ -21,7 +21,7 @@ test("FAQs are server-rendered native disclosures with all answers available wit
   assert.ok(!html.includes("Your next chapter"));
 });
 
-test("call booking is a server-rendered secure link with a new-tab announcement", () => {
+test("explicit recovery links include security attributes and a new-tab announcement", () => {
   const html = renderToStaticMarkup(
     createElement(ActionLink, {
       href: site.bookingUrl,
@@ -47,4 +47,19 @@ test("existing internal action links keep their same-tab navigation", () => {
   assert.ok(html.includes('href="/projects"'));
   assert.ok(!html.includes('target="_blank"'));
   assert.ok(!html.includes("opens in a new tab"));
+});
+
+test("booking disclosure buttons expose their relationship and cannot navigate away", () => {
+  const html = renderToStaticMarkup(
+    createElement(ActionButton, {
+      type: "button",
+      label: "Book a call",
+      "aria-controls": "contact-calendar",
+      "aria-expanded": true,
+    }),
+  );
+  assert.ok(html.includes('aria-controls="contact-calendar"'));
+  assert.ok(html.includes('aria-expanded="true"'));
+  assert.ok(!html.includes('target="_blank"'));
+  assert.ok(!html.includes("href="));
 });
