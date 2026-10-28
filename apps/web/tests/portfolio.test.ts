@@ -7,6 +7,7 @@ import {
   portfolioPage,
   projectBySlug,
   selectedPortfolio,
+  reviewsForProject,
 } from "../lib/portfolio-data";
 import { getWorkCountries } from "../data/countries";
 import land from "../data/globe-points.json";
@@ -32,6 +33,89 @@ const page = (
   limit: number,
   offset = 0,
 ) => Response.json({ [resource]: rows, total, limit, offset });
+
+const linkedReview = (id: number, projectSlug: string | null) => ({
+  id,
+  projectSlug,
+  title: null,
+  body: "A genuine project review.",
+  rating: null,
+  author: null,
+  reviewedAt: null,
+  source: "direct",
+  sourceUrl: null,
+  featured: false,
+});
+
+test("linked reviews use exact published project relationships across every API page, not authors or homepage selection", async () => {
+  const offsets: number[] = [];
+  const reviews = await reviewsForProject(
+    "https://api.example.test",
+    "sea-league",
+    async (input, options) => {
+      const url = new URL(String(input));
+      assert.equal(url.pathname, "/api/portfolio/reviews");
+      assert.equal(url.searchParams.has("featured"), false);
+      assert.equal(options?.cache, "no-store");
+      const offset = Number(url.searchParams.get("offset"));
+      offsets.push(offset);
+      return page(
+        "reviews",
+        offset === 0
+          ? Array.from({ length: 100 }, (_, i) => ({
+              ...linkedReview(i + 1, i === 99 ? "sea-league" : null),
+              clientId: 9,
+              internalNotes: "private",
+            }))
+          : [
+              linkedReview(101, "other-project"),
+              linkedReview(102, "sea-league"),
+            ],
+        102,
+        100,
+        offset,
+      );
+    },
+  );
+  assert.deepEqual(offsets, [0, 100]);
+  assert.deepEqual(
+    reviews.map((r) => r.id),
+    [100, 102],
+  );
+  assert.equal(reviews[0].author, null);
+  assert.equal("clientId" in reviews[0], false);
+  assert.equal("internalNotes" in reviews[0], false);
+});
+
+test("missing project links stay empty and failed or incomplete review pagination is not treated as valid feedback", async () => {
+  assert.deepEqual(
+    await reviewsForProject("https://api.example.test", "knowyuu", async () =>
+      page(
+        "reviews",
+        [linkedReview(1, null), linkedReview(2, "sea-league")],
+        2,
+        100,
+      ),
+    ),
+    [],
+  );
+  await assert.rejects(
+    () =>
+      reviewsForProject(
+        "https://api.example.test",
+        "sea-league",
+        async () => new Response(null, { status: 503 }),
+      ),
+    /unavailable/,
+  );
+  await assert.rejects(
+    () =>
+      reviewsForProject("https://api.example.test", "sea-league", async () =>
+        page("reviews", [], 101, 100),
+      ),
+    /linked reviews/,
+  );
+});
 
 test("retrieves the complete catalog across API pages, using uncached public requests", async () => {
   const calls: number[] = [];

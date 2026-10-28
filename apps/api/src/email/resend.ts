@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 
 import type { ContactInput } from "@promdevs/contracts";
+import { HttpError } from "../errors.js";
 
 export type ContactEmailInput = Omit<ContactInput, "company">;
 
@@ -15,20 +16,11 @@ export async function sendContactEmail(payload: ContactEmailInput) {
   const from = `${fromName} <${fromEmail}>`;
 
   if (!apiKey || !toEmail) {
-    console.info(
-      "[TODO] Configure RESEND_API_KEY and CONTACT_TO_EMAIL. Contact payload:",
-      {
-        ...payload,
-        attachments: payload.attachments?.map(({ filename, contentType }) => ({
-          filename,
-          contentType,
-        })),
-      },
+    // Never acknowledge delivery or write a visitor's private message to logs.
+    throw new HttpError(
+      503,
+      "We couldn't send your message. Please try again shortly.",
     );
-    return {
-      ok: true,
-      fallback: true,
-    } as const;
   }
 
   const resend = new Resend(apiKey);

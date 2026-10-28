@@ -240,6 +240,17 @@ export function Header({ homePath = "/" }: { homePath?: string } = {}) {
             />
           </nav>
         )}
+        <noscript>
+          <style>{`.site-header .desktop-nav,.site-header .header-actions{display:none!important}.no-script-nav{display:flex;flex-wrap:wrap;gap:8px 24px;padding:0 0 14px;font-size:13px}.no-script-nav a{display:inline-flex;align-items:center;min-height:44px}`}</style>
+          <nav className="no-script-nav" aria-label="Site navigation">
+            <a href={`${homePath}#services`}>Services</a>
+            <Link href="/projects" prefetch={false}>
+              Our work
+            </Link>
+            <a href={`${homePath}#faqs`}>FAQs</a>
+            <a href={`${homePath}#contact`}>Let’s talk</a>
+          </nav>
+        </noscript>
       </div>
     </header>
   );

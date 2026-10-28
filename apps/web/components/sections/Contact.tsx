@@ -14,6 +14,7 @@ import { ActionButton } from "@/components/Action";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { site } from "@/lib/site";
+import { contactNotice, type ContactReceipt } from "@/lib/contact-submission";
 import {
   attachmentSelectionError,
   encodeContactAttachments,
@@ -53,10 +54,14 @@ const initialValues = {
   company: "",
 };
 
-export function Contact() {
+export function Contact({ receipt }: { receipt?: ContactReceipt } = {}) {
   const [form, setForm] = useState(initialValues);
-  const [status, setStatus] = useState<Status>("idle");
-  const [feedback, setFeedback] = useState("");
+  const [status, setStatus] = useState<Status>(
+    () => contactNotice(receipt).status,
+  );
+  const [feedback, setFeedback] = useState(
+    () => contactNotice(receipt).message,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("message");
   const [calendarLoaded, setCalendarLoaded] = useState(false);
@@ -189,6 +194,8 @@ export function Contact() {
             hidden={activeTab !== "message"}
           >
             <form
+              action="/api/contact"
+              method="post"
               className="contact-form"
               onSubmit={onSubmit}
               aria-busy={submitting}

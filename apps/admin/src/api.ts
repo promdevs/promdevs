@@ -30,11 +30,22 @@ export async function api<T>(
       "The API is unavailable. Check that it is running and try again.",
     );
   }
-  const body = await response.json().catch(() => ({}));
+  const body: unknown = await response.json().catch(() => null);
+  const object =
+    body !== null && typeof body === "object" && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : null;
   if (!response.ok)
     throw new ApiError(
       response.status,
-      body.error || "The request could not be completed.",
+      typeof object?.error === "string"
+        ? object.error
+        : "The request could not be completed.",
+    );
+  if (!object)
+    throw new ApiError(
+      502,
+      "The server returned an invalid response. Please reload and try again.",
     );
   return body as T;
 }

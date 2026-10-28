@@ -1,42 +1,40 @@
-export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
-import { getProjects } from "@/lib/api";
-import { ProjectsFilter } from "@/components/ProjectsFilter";
-import { Footer } from "@/components/Footer";
-import { Header } from "@/components/Header";
-import { MotionReveal } from "@/components/MotionReveal";
+import { redirect } from "next/navigation";
+import { getProjectCatalog } from "@/lib/api";
+import { ProjectsDirectory } from "@/components/ProjectsDirectory";
 
-export const metadata: Metadata = {
-  title: "Our Work",
-  alternates: { canonical: "/projects" },
-  description:
-    "Explore PromDevs project stories and digital product work. Contact our studio to discuss your web, mobile, or AI product.",
+export const dynamic = "force-dynamic";
+type Props = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function ProjectsPage() {
-  const allProjects = await getProjects();
+export function generateMetadata(): Metadata {
+  const title = "Our work";
+  const description =
+    "Explore the web apps, mobile apps, AI products, and websites PromDevs has designed, built, and helped move forward.";
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: "/projects",
+    },
+    openGraph: {
+      title: `${title} | PromDevs`,
+      description,
+      url: "/projects",
+    },
+    twitter: { title: `${title} | PromDevs`, description },
+  };
+}
 
-  return (
-    <>
-      <Header homePath="/?view=html" />
-      <main id="main-content" className="shell projects-page">
-        <Link href="/" className="text-link mb-12">
-          <ChevronLeft size={16} aria-hidden /> Back to home
-        </Link>
-        <MotionReveal entrance className="section-intro">
-          <p className="eyebrow">Our work</p>
-          <div>
-            <h1 className="section-heading">Ideas made real.</h1>
-            <p className="muted">
-              Explore the products, platforms, and digital experiences we build.
-            </p>
-          </div>
-        </MotionReveal>
-        <ProjectsFilter projects={allProjects} />
-      </main>
-      <Footer homePath="/?view=html" />
-    </>
-  );
+export default async function ProjectsPage({ searchParams }: Props) {
+  const params = await searchParams;
+  if (
+    params.page !== undefined ||
+    params.q !== undefined ||
+    params.type !== undefined
+  )
+    redirect("/projects");
+  const projects = await getProjectCatalog();
+  return <ProjectsDirectory projects={projects} />;
 }
