@@ -31,10 +31,12 @@ function ActionContent({
   label,
   loading = false,
   opensNewTab = false,
+  showArrow = true,
 }: {
   label: string;
   loading?: boolean;
   opensNewTab?: boolean;
+  showArrow?: boolean;
 }) {
   const face = (filled: boolean) => (
     <span
@@ -49,16 +51,18 @@ function ActionContent({
           <span>{label}</span>
         </span>
       </span>
-      <span className="action-arrow-window">
-        {loading ? (
-          <LoaderCircle className="animate-spin" size={18} />
-        ) : (
-          <>
-            <ArrowUpRight className="action-arrow-first" size={18} />
-            <ArrowUpRight className="action-arrow-next" size={18} />
-          </>
-        )}
-      </span>
+      {showArrow && (
+        <span className="action-arrow-window">
+          {loading ? (
+            <LoaderCircle className="animate-spin" size={18} />
+          ) : (
+            <>
+              <ArrowUpRight className="action-arrow-first" size={18} />
+              <ArrowUpRight className="action-arrow-next" size={18} />
+            </>
+          )}
+        </span>
+      )}
     </span>
   );
   return (
@@ -80,6 +84,9 @@ export function ActionLink({
   className = "",
   onClick,
   newTab = false,
+  showArrow = true,
+  current = false,
+  prefetch,
 }: {
   href: string;
   label: string;
@@ -87,19 +94,23 @@ export function ActionLink({
   className?: string;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
   newTab?: boolean;
+  showArrow?: boolean;
+  current?: boolean;
+  prefetch?: boolean;
 }) {
   return (
     <Link
       href={href}
       target={newTab ? "_blank" : undefined}
       rel={newTab ? "noopener noreferrer" : undefined}
-      prefetch={newTab ? false : undefined}
+      prefetch={newTab ? false : prefetch}
+      aria-current={current ? "true" : undefined}
       className={`action action-${variant} ${className}`}
       onClick={onClick}
       onPointerEnter={setOrigin}
       onFocus={setOrigin}
     >
-      <ActionContent label={label} opensNewTab={newTab} />
+      <ActionContent label={label} opensNewTab={newTab} showArrow={showArrow} />
     </Link>
   );
 }

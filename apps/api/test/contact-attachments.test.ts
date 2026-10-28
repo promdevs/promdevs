@@ -171,7 +171,7 @@ test("contact endpoint forwards valid attachments, rejects spoofed bytes, and re
   }
 });
 
-test("Resend receives the original attachment bytes and fallback logs omit contents", async (t) => {
+test("Resend sends original bytes and missing configuration fails without logging visitor data", async (t) => {
   const { sendContactEmail } = await import("../src/email/resend.js");
   const previousKey = process.env.RESEND_API_KEY;
   const previousTo = process.env.CONTACT_TO_EMAIL;
@@ -215,11 +215,11 @@ test("Resend receives the original attachment bytes and fallback logs omit conte
   t.mock.method(console, "info", (...values: unknown[]) => {
     logs.push(values);
   });
-  assert.deepEqual(await sendContactEmail(payload), {
-    ok: true,
-    fallback: true,
+  await assert.rejects(sendContactEmail(payload), (error: unknown) => {
+    assert.equal((error as { status: number }).status, 503);
+    assert.ok(!String(error).includes(contact.email));
+    return true;
   });
-  assert.ok(JSON.stringify(logs).includes("brief.pdf"));
-  assert.ok(!JSON.stringify(logs).includes(pdf.content));
+  assert.deepEqual(logs, []);
   assert.equal(fetchMock.mock.callCount(), 1);
 });

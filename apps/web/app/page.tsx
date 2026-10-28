@@ -11,13 +11,16 @@ import { site } from "@/lib/site";
 import { Suspense } from "react";
 import { Projects } from "@/components/sections/Projects";
 import { Reviews } from "@/components/sections/Reviews";
+import { contactReceipt } from "@/lib/contact-submission";
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; contact?: string | string[] }>;
 }) {
-  const htmlOnly = (await searchParams).view === "html";
+  const params = await searchParams;
+  const htmlOnly = params.view === "html";
+  const receipt = contactReceipt(params.contact);
   // React's streaming reveal scripts cannot run with JS disabled. The same canonical
   // page can deliver a complete HTML document instead of hiding streamed sections.
   const [work, stories] = htmlOnly
@@ -77,7 +80,7 @@ export default async function HomePage({
           </>
         )}
         <FAQs />
-        <Contact />
+        <Contact key={receipt ?? "contact"} receipt={receipt} />
       </main>
       <Footer homePath={htmlOnly ? "/?view=html" : "/"} />
     </>

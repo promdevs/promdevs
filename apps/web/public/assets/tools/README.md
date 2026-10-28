@@ -15,6 +15,7 @@ Brand names and marks remain the property of their respective owners.
 - Figma: [SVGL source](https://github.com/pheralb/svgl/blob/main/static/library/figma.svg).
 - Framer: [SVGL source](https://github.com/pheralb/svgl/blob/main/static/library/framer.svg).
 - Bolt: [SVGL source](https://github.com/pheralb/svgl/blob/main/static/library/bolt-new.svg). The full wordmark is used without repeating its name visually; an invalid source fill value is normalized to black.
+- v0: [SVGL source](https://github.com/pheralb/svgl/blob/main/static/library/v0_light.svg). Used in project toolkits, without adding it to the homepage strip.
 - Anything: [official GitHub organization](https://github.com/Create-Inc), which links to anything.com. `anything.png` is its [128px organization avatar](https://avatars.githubusercontent.com/u/78987092?v=4&s=128), retrieved October 22, 2026. Its original background and white mark are retained in both themes.
 
 SVGL's MIT notice is included in `SVGL-LICENSE.txt`; it does not grant rights to
@@ -22,3 +23,4 @@ third-party trademarks. Source colors are retained in the SVG files. The tools
 strip uses CSS filters to display monochrome SVG marks in light and dark themes;
 Anything's PNG retains its original white-on-dark treatment.
 Assets are bundled locally rather than hotlinked. No logo package is required.
+Project toolkits retain original color marks. Monochrome marks switch to white in dark mode for legibility; names remain available as accessible text.

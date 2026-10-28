@@ -1,154 +1,45 @@
-export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowUpRight, ChevronLeft } from "lucide-react";
-import { getProject } from "@/lib/api";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { MotionReveal } from "@/components/MotionReveal";
-import { ActionLink } from "@/components/Action";
+import { getProject, getProjectReviews } from "@/lib/api";
+import { ProjectCaseStudy } from "@/components/ProjectCaseStudy";
+import { ProjectFeedback } from "@/components/ProjectFeedback";
+import { projectPageTitle } from "@/lib/project-catalog";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
-  const project = await getProject(slug);
-  if (!project) return { title: "Project Not Found — PromDevs" };
-  return {
-    title: project.seoTitle || project.title,
-    alternates: { canonical: `/projects/${project.slug}` },
-    openGraph: {
-      title: project.seoTitle || project.title,
-      description: project.seoDescription || project.description,
-      ...(project.socialImage ? { images: [project.socialImage] } : {}),
-    },
-    twitter: {
-      title: project.seoTitle || project.title,
-      description: project.seoDescription || project.description,
-      ...(project.socialImage ? { images: [project.socialImage] } : {}),
-    },
-    description: project.seoDescription || project.description,
-  };
-}
+export const dynamic = "force-dynamic";
+type Props = { params: Promise<{ slug: string }> };
 
-export default async function ProjectDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProject(slug);
   if (!project) notFound();
+  const title = projectPageTitle(project);
+  const description = project.seoDescription || project.description;
+  const image = project.socialImage || project.coverImage;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/projects/${project.slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/projects/${project.slug}`,
+      ...(image
+        ? { images: [{ url: image, alt: project.coverAlt || project.title }] }
+        : {}),
+    },
+    twitter: { title, description, ...(image ? { images: [image] } : {}) },
+  };
+}
+
+export default async function ProjectDetailPage({ params }: Props) {
+  const { slug } = await params;
+  const project = await getProject(slug);
+  if (!project) notFound();
+  const reviews = await getProjectReviews(project.slug);
   return (
-    <>
-      <Header homePath="/?view=html" />
-      <main id="main-content" className="shell projects-page">
-        <Link href="/projects" className="text-link mb-12">
-          <ChevronLeft size={16} aria-hidden /> All projects
-        </Link>
-        <MotionReveal entrance className="section-intro">
-          <p className="eyebrow">
-            {[
-              project.category ||
-                project.productTypes
-                  .map((type) => type.replaceAll("_", " "))
-                  .join(" & "),
-              project.year,
-            ]
-              .filter((value) => value !== null && value !== "")
-              .join(" / ")}
-          </p>
-          <div>
-            <h1 className="section-heading">{project.title}</h1>
-            <p className="muted">{project.description}</p>
-            <div className="flex flex-wrap gap-6 mt-6">
-              {project.liveUrl && (
-                <a
-                  href={project.liveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-link"
-                >
-                  View live site <ArrowUpRight aria-hidden />
-                </a>
-              )}
-              {project.githubUrl && (
-                <a
-                  href={project.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-link"
-                >
-                  View source <ArrowUpRight aria-hidden />
-                </a>
-              )}
-              {[
-                [project.appStoreUrl, "App Store"],
-                [project.playStoreUrl, "Google Play"],
-              ].map(
-                ([url, label]) =>
-                  url && (
-                    <a
-                      key={label}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-link"
-                    >
-                      {label}
-                      <ArrowUpRight aria-hidden />
-                    </a>
-                  ),
-              )}
-            </div>
-          </div>
-        </MotionReveal>
-        {project.coverImage && (
-          <MotionReveal className="project-detail-cover">
-            <Image
-              src={project.coverImage}
-              alt={project.coverAlt}
-              fill
-              sizes="100vw"
-              className="object-contain"
-              unoptimized
-            />
-          </MotionReveal>
-        )}
-        <div className="capability-strip mb-16">
-          {project.skills.map((skill) => (
-            <span key={skill.slug}>{skill.name}</span>
-          ))}
-        </div>
-        {[
-          { label: "The challenge", text: project.problem },
-          { label: "Our approach", text: project.approach },
-          { label: "The solution", text: project.solution },
-          { label: "The outcome", text: project.results },
-        ]
-          .filter((section) => section.text)
-          .map((section) => (
-            <MotionReveal key={section.label}>
-              <section className="case-section">
-                <h2>{section.label}</h2>
-                <p>{section.text}</p>
-              </section>
-            </MotionReveal>
-          ))}
-        <MotionReveal className="project-end">
-          <h2 className="section-heading">
-            Let&apos;s build
-            <br />
-            something great.
-          </h2>
-          <ActionLink href="/?view=html#contact" label="Start a conversation" />
-        </MotionReveal>
-      </main>
-      <Footer homePath="/?view=html" />
-    </>
+    <ProjectCaseStudy
+      project={project}
+      feedback={<ProjectFeedback reviews={reviews} />}
+    />
   );
 }

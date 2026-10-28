@@ -3,6 +3,7 @@ import {
   publicProjectSummarySchema,
   publicReviewSchema,
   type PublicProjectSummary,
+  type PublicReview,
 } from "@promdevs/contracts";
 
 type Resource = "projects" | "reviews";
@@ -118,6 +119,32 @@ export async function selectedPortfolio(
   return preferred.items.length
     ? preferred.items
     : (await portfolioPage(base, resource, { limit }, fetcher)).items;
+}
+
+export async function reviewsForProject(
+  base: string,
+  slug: string,
+  fetcher: Fetcher = fetch,
+): Promise<PublicReview[]> {
+  const matches: PublicReview[] = [];
+  let offset = 0;
+  while (true) {
+    const { items, total } = await portfolioPage(
+      base,
+      "reviews",
+      { offset },
+      fetcher,
+    );
+    matches.push(
+      ...(items as PublicReview[]).filter(
+        (review) => review.projectSlug === slug,
+      ),
+    );
+    offset += items.length;
+    if (offset >= total) return matches;
+    if (!items.length || offset > 10000)
+      throw new Error("Portfolio pagination could not retrieve linked reviews");
+  }
 }
 
 export async function projectBySlug(
