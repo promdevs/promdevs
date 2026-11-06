@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   allProjects,
+  allReviews,
   featuredProjects,
   featuredWorkProjects,
   portfolioPage,
@@ -45,6 +46,67 @@ const linkedReview = (id: number, projectSlug: string | null) => ({
   source: "direct",
   sourceUrl: null,
   featured: false,
+});
+
+test("client stories retrieves every published review in API order without a featured filter or homepage limit", async () => {
+  const offsets: number[] = [];
+  const reviews = await allReviews(
+    "https://api.example.test",
+    async (input, options) => {
+      const url = new URL(String(input));
+      assert.equal(url.pathname, "/api/portfolio/reviews");
+      assert.equal(url.searchParams.has("featured"), false);
+      assert.equal(options?.cache, "no-store");
+      const offset = Number(url.searchParams.get("offset"));
+      offsets.push(offset);
+      return page(
+        "reviews",
+        Array.from({ length: Math.min(100, 103 - offset) }, (_, i) => ({
+          ...linkedReview(offset + i + 1, null),
+          internalNotes: "private",
+        })),
+        103,
+        100,
+        offset,
+      );
+    },
+  );
+  assert.deepEqual(offsets, [0, 100]);
+  assert.equal(reviews.length, 103);
+  assert.deepEqual(
+    reviews.map((r) => r.id),
+    Array.from({ length: 103 }, (_, i) => i + 1),
+  );
+  assert.equal("internalNotes" in reviews[0], false);
+});
+
+test("client stories distinguishes empty data, API outages, invalid records and incomplete pagination", async () => {
+  assert.deepEqual(
+    await allReviews("https://api.example.test", async () =>
+      page("reviews", [], 0, 100),
+    ),
+    [],
+  );
+  await assert.rejects(
+    () =>
+      allReviews(
+        "https://api.example.test",
+        async () => new Response(null, { status: 503 }),
+      ),
+    /unavailable/,
+  );
+  await assert.rejects(
+    () =>
+      allReviews("https://api.example.test", async () =>
+        page("reviews", [], 1, 100),
+      ),
+    /complete review collection/,
+  );
+  await assert.rejects(() =>
+    allReviews("https://api.example.test", async () =>
+      page("reviews", [{ body: "invalid" }], 1, 100),
+    ),
+  );
 });
 
 test("linked reviews use exact published project relationships across every API page, not authors or homepage selection", async () => {

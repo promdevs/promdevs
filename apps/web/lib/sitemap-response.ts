@@ -1,4 +1,5 @@
 import { site } from "./site";
+import { expertiseNavigation } from "../data/expertise-navigation";
 
 const escapeXml = (value: string) =>
   value.replace(
@@ -19,6 +20,12 @@ export async function sitemapResponse(read: () => Promise<{ slug: string }[]>) {
     const paths = [
       "/",
       "/projects",
+      "/client-stories",
+      "/about",
+      "/services",
+      "/privacy-policy",
+      "/terms-of-service",
+      ...expertiseNavigation.map(({ href }) => href),
       ...projects.map(({ slug }) => `/projects/${encodeURIComponent(slug)}`),
     ];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${paths.map((path) => `  <url><loc>${escapeXml(site.url + path)}</loc></url>`).join("\n")}\n</urlset>`;

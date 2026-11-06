@@ -18,6 +18,7 @@ import { ProjectsDirectory } from "../components/ProjectsDirectory";
 import { ProjectMarkdown } from "../components/ProjectMarkdown";
 import { ProjectCaseStudy } from "../components/ProjectCaseStudy";
 import { ProjectFeedback } from "../components/ProjectFeedback";
+import { MoreProjects } from "../components/MoreProjects";
 
 const project = (id = 1): PublicProject => ({
   id,
@@ -55,6 +56,52 @@ const project = (id = 1): PublicProject => ({
 });
 const render = (component: Parameters<typeof renderToStaticMarkup>[0]) =>
   renderToStaticMarkup(component);
+
+test("more projects excludes the current project, caps at three and preserves catalog order", () => {
+  const projects = [project(5), project(2), project(1), project(4), project(3)];
+  const original = [...projects];
+  const html = render(
+    createElement(MoreProjects, { projects, currentSlug: "product-1" }),
+  );
+  const links = [...html.matchAll(/href="\/projects\/(product-\d+)"/g)].map(
+    (match) => match[1],
+  );
+  assert.deepEqual(links, ["product-5", "product-2", "product-4"]);
+  assert.deepEqual(projects, original);
+  assert.equal((html.match(/<h3>/g) ?? []).length, 3);
+  assert.equal((html.match(/<h2/g) ?? []).length, 1);
+  assert.ok(html.includes('href="/projects"'));
+  assert.ok(!html.includes('loading="eager"'));
+  assert.ok(!html.includes('fetchPriority="high"'));
+  assert.equal((html.match(/loading="lazy"/g) ?? []).length, 3);
+});
+
+test("more projects omits empty sections and renders smaller catalogs without placeholders", () => {
+  for (const projects of [[], [project(1)]]) {
+    assert.equal(
+      render(
+        createElement(MoreProjects, { projects, currentSlug: "product-1" }),
+      ),
+      "",
+    );
+  }
+  const moreProjects = createElement(MoreProjects, {
+    projects: [project(1), project(2)],
+    currentSlug: "product-1",
+  });
+  const html = render(
+    createElement(ProjectCaseStudy, {
+      project: project(1),
+      moreProjects,
+    }),
+  );
+  assert.equal((html.match(/class="catalog-card"/g) ?? []).length, 1);
+  assert.ok(
+    html.indexOf('class="case-more"') <
+      html.indexOf('class="motion-reveal case-end"'),
+  );
+  assert.equal((html.match(/<h1/g) ?? []).length, 1);
+});
 
 test("project feedback renders actual quotes and independent review attribution before the contact panel", () => {
   const review: PublicReview = {
@@ -254,7 +301,35 @@ test("sparse projects omit empty story, facts and gallery while keeping a usable
   assert.ok(!html.includes("The challenge"));
   assert.ok(!html.includes('class="project-gallery"'));
   assert.ok(!html.includes("Client</dt>"));
-  assert.ok(html.includes('href="/#contact"'));
+  assert.ok(html.includes('href="/?view=html#contact"'));
+});
+
+test("case study contact ending follows the page theme and shared actions without an inverse panel", async () => {
+  const html = render(createElement(ProjectCaseStudy, { project: project() }));
+  const ending = html.slice(html.indexOf('class="motion-reveal case-end"'));
+  assert.ok(ending.includes('aria-labelledby="case-contact-heading"'));
+  assert.ok(
+    ending.indexOf('id="case-contact-heading"') <
+      ending.indexOf('class="case-end-copy"'),
+  );
+  assert.ok(
+    ending.includes(
+      "Starting something new or making an existing product better?",
+    ),
+  );
+  assert.ok(ending.includes('href="/?view=html#contact"'));
+  assert.ok(ending.includes('href="/projects"'));
+  assert.ok(ending.includes("action-primary"));
+  assert.ok(ending.includes("action-secondary"));
+  assert.ok(!ending.includes("case-end-mark"));
+  const css = await readFile(
+    new URL("../app/projects/projects.css", import.meta.url),
+    "utf8",
+  );
+  const rule = css.match(/\.case-end\s*\{([^}]*)\}/)?.[1];
+  assert.ok(rule?.includes("border-top: 1px solid var(--line)"));
+  assert.ok(!rule?.includes("background:"));
+  assert.ok(!css.includes(".case-end .action-primary"));
 });
 
 test("case study introduction reads title, description, then shared destination actions", () => {

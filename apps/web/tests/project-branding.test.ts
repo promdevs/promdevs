@@ -79,16 +79,17 @@ test("store destinations use untouched local download badges, recognized from li
 test("cover ambience derives from the uploaded image while retaining one sharp, uncropped accessible image", () => {
   const html = renderToStaticMarkup(
     createElement(ProjectCover, {
-      src: "https://media.example.test/cover.png",
+      src: "/images/founder/moses-adebayo-bw.webp",
       alt: "Actual project cover",
       hasGallery: true,
     }),
   );
   assert.ok(html.includes('class="case-cover-ambience" aria-hidden="true"'));
   assert.ok(html.includes('class="case-cover-wash" aria-hidden="true"'));
-  assert.ok(html.includes("background-image:url("));
-  assert.ok(html.includes("https://media.example.test/cover.png"));
-  assert.equal((html.match(/<img\b/g) ?? []).length, 1);
+  assert.ok(html.includes('sizes="160px"'));
+  assert.ok(html.includes(encodeURIComponent("/images/founder/moses-adebayo-bw.webp")));
+  assert.equal((html.match(/<img\b/g) ?? []).length, 2);
+  assert.equal((html.match(/alt="Actual project cover"/g) ?? []).length, 1);
   assert.ok(html.includes('alt="Actual project cover"'));
   assert.ok(html.includes("object-fit:contain"));
   assert.ok(html.includes('href="#project-gallery"'));

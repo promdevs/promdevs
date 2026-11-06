@@ -5,34 +5,28 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ActionLink } from "@/components/Action";
+import { expertiseNavigation } from "@/data/expertise-navigation";
 
 type Group = "expertise" | "work";
 const labels = { expertise: "Expertise", work: "Our Work" };
 
-function GroupContent({
-  group,
-  close,
-  homePath,
-}: {
-  group: Group;
-  close: () => void;
-  homePath: string;
-}) {
+function GroupContent({ group, close }: { group: Group; close: () => void }) {
   return group === "expertise" ? (
     <>
       <p className="nav-intro">Build, improve, and launch.</p>
-      {["Replit", "Lovable", "Base44"].map((platform) => (
+      {expertiseNavigation.map((platform) => (
         <Link
           className="nav-item"
-          key={platform}
-          href={`${homePath}#contact`}
+          key={platform.key}
+          href={platform.href}
+          prefetch={false}
           onClick={close}
         >
           <span>
-            {platform}
+            {platform.name}
             <ArrowUpRight size={15} aria-hidden />
           </span>
-          <small>Discuss building or improving your {platform} project.</small>
+          <small>{platform.summary}</small>
         </Link>
       ))}
     </>
@@ -45,12 +39,13 @@ function GroupContent({
         </span>
         <small>Explore our products and digital experiences.</small>
       </Link>
-      <div className="nav-item nav-unavailable" aria-disabled="true">
+      <Link className="nav-item" href="/client-stories" onClick={close}>
         <span>
-          Client Stories<small className="nav-soon">Coming soon</small>
+          Client Stories
+          <ArrowUpRight size={15} aria-hidden />
         </span>
-        <small>The people and stories behind the work.</small>
-      </div>
+        <small>What our clients say about working with us.</small>
+      </Link>
     </>
   );
 }
@@ -133,7 +128,7 @@ export function Header({ homePath = "/" }: { homePath?: string } = {}) {
           className={mobile ? "mobile-group-content" : "nav-panel-wrap"}
         >
           <div className="nav-panel">
-            <GroupContent group={id} close={close} homePath={homePath} />
+            <GroupContent group={id} close={close} />
           </div>
         </div>
       )}
@@ -187,11 +182,14 @@ export function Header({ homePath = "/" }: { homePath?: string } = {}) {
             </span>
           </Link>
           <nav className="desktop-nav" aria-label="Main navigation">
-            <Link href={`${homePath}#services`} onClick={close}>
+            <Link href="/services" onClick={close}>
               Services
             </Link>
             {group("expertise")}
             {group("work")}
+            <Link href="/about" onClick={close}>
+              About
+            </Link>
           </nav>
           <div className="header-actions">
             <ThemeToggle />
@@ -227,11 +225,14 @@ export function Header({ homePath = "/" }: { homePath?: string } = {}) {
             className="mobile-nav"
             aria-label="Mobile navigation"
           >
-            <Link href={`${homePath}#services`} onClick={close}>
+            <Link href="/services" onClick={close}>
               Services
             </Link>
             {group("expertise", true)}
             {group("work", true)}
+            <Link href="/about" onClick={close}>
+              About
+            </Link>
             <ActionLink
               href={`${homePath}#contact`}
               label="Let's talk"
@@ -241,11 +242,24 @@ export function Header({ homePath = "/" }: { homePath?: string } = {}) {
           </nav>
         )}
         <noscript>
-          <style>{`.site-header .desktop-nav,.site-header .header-actions{display:none!important}.no-script-nav{display:flex;flex-wrap:wrap;gap:8px 24px;padding:0 0 14px;font-size:13px}.no-script-nav a{display:inline-flex;align-items:center;min-height:44px}`}</style>
+          <style>{`.site-header{position:relative!important}.site-header .desktop-nav,.site-header .header-actions{display:none!important}.no-script-nav{display:flex;flex-wrap:wrap;gap:8px 24px;padding:0 0 14px;font-size:13px}.no-script-nav a{display:inline-flex;align-items:center;min-height:44px}`}</style>
           <nav className="no-script-nav" aria-label="Site navigation">
-            <a href={`${homePath}#services`}>Services</a>
+            <Link href="/services" prefetch={false}>
+              Services
+            </Link>
+            {expertiseNavigation.map(({ key, name, href }) => (
+              <Link key={key} href={href} prefetch={false}>
+                {name}
+              </Link>
+            ))}
             <Link href="/projects" prefetch={false}>
               Our work
+            </Link>
+            <Link href="/client-stories" prefetch={false}>
+              Client stories
+            </Link>
+            <Link href="/about" prefetch={false}>
+              About
             </Link>
             <a href={`${homePath}#faqs`}>FAQs</a>
             <a href={`${homePath}#contact`}>Let’s talk</a>

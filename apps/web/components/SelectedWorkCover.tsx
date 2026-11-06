@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { canOptimizeImage } from "../lib/image-delivery";
 
 export function SelectedWorkCover({ src, alt }: { src: string; alt: string }) {
   const [failedSource, setFailedSource] = useState<string | null>(null);
@@ -16,7 +17,7 @@ export function SelectedWorkCover({ src, alt }: { src: string; alt: string }) {
       fill
       sizes="(min-width: 1100px) 34vw, (min-width: 700px) 46vw, 92vw"
       loading="lazy"
-      unoptimized
+      unoptimized={!canOptimizeImage(src)}
       onError={() => setFailedSource(src)}
     />
   );

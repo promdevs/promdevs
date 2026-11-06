@@ -3,14 +3,40 @@ import { cache } from "react";
 import type { PublicReview } from "@promdevs/contracts";
 import {
   allProjects,
+  allReviews,
   featuredWorkProjects,
   type FeaturedWorkProject,
   projectBySlug,
+  projectsForPlatform,
   reviewsForProject,
   selectedPortfolio,
 } from "./portfolio-data";
 
 const apiBase = () => process.env.API_BASE_URL || "http://127.0.0.1:4000";
+
+export const getPlatformProjects = cache(async (platform: string) => {
+  try {
+    return await projectsForPlatform(apiBase(), platform);
+  } catch (error) {
+    console.error(
+      "[portfolio] Expertise work unavailable:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    return [];
+  }
+});
+
+export const getReviewCatalog = cache(async () => {
+  try {
+    return await allReviews(apiBase());
+  } catch (error) {
+    console.error(
+      "[portfolio] Client stories unavailable:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
+    throw new Error("Client stories are temporarily unavailable.");
+  }
+});
 
 // Strict, request-scoped reads for the directory: an outage is not an empty catalog.
 export const getProjectCatalog = cache(async () => {

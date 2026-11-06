@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, Star } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { PublicReview } from "@promdevs/contracts";
 import { createReviewRotation } from "@/lib/review-controller";
+import { canOptimizeImage } from "@/lib/image-delivery";
 
 export function ReviewBrowser({ reviews }: { reviews: PublicReview[] }) {
   const root = useRef<HTMLDivElement>(null);
@@ -58,7 +59,7 @@ export function ReviewBrowser({ reviews }: { reviews: PublicReview[] }) {
                   alt=""
                   width={48}
                   height={48}
-                  unoptimized
+                  unoptimized={!canOptimizeImage(review.author.avatar)}
                   className="quote-avatar"
                 />
               )}

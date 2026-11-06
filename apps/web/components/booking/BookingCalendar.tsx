@@ -6,6 +6,7 @@ import { LoaderCircle, RotateCcw } from "lucide-react";
 import { bookingEventPath, bookingUi } from "@/lib/booking";
 import { site } from "@/lib/site";
 import styles from "./BookingCalendar.module.css";
+import { trackConfirmedBooking } from "@/lib/analytics";
 
 type Phase = "loading" | "ready" | "slow" | "error";
 const embedScriptUrl = "https://app.cal.com/embed/embed.js";
@@ -61,6 +62,9 @@ export default function BookingCalendar() {
           window.clearTimeout(timeout);
           if (!disposed) setPhase("error");
         };
+        const booked = (event: unknown) => {
+          if (!disposed) trackConfirmedBooking(event);
+        };
         const syncTheme = () => {
           cal(
             "ui",
@@ -74,6 +78,7 @@ export default function BookingCalendar() {
         };
         cal("on", { action: "linkReady", callback: ready });
         cal("on", { action: "linkFailed", callback: failed });
+        cal("on", { action: "bookingSuccessfulV2", callback: booked });
         syncTheme();
         compact.addEventListener("change", syncTheme);
         const size = new ResizeObserver(syncTheme);
@@ -89,6 +94,7 @@ export default function BookingCalendar() {
           compact.removeEventListener("change", syncTheme);
           cal("off", { action: "linkReady", callback: ready });
           cal("off", { action: "linkFailed", callback: failed });
+          cal("off", { action: "bookingSuccessfulV2", callback: booked });
         };
       })
       .catch(() => {

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import {
   AppWindow,
   ArrowLeft,
-  ArrowUpRight,
   BadgeCheck,
   BrainCircuit,
   CircleCheck,
@@ -33,9 +32,11 @@ import { site } from "../lib/site";
 export function ProjectCaseStudy({
   project,
   feedback,
+  moreProjects,
 }: {
   project: PublicProject;
   feedback?: ReactNode;
+  moreProjects?: ReactNode;
 }) {
   const destinations = projectDestinations(project);
   const sections = [
@@ -148,19 +149,27 @@ export function ProjectCaseStudy({
       )}
       <ProjectGallery media={project.gallery} title={project.title} />
       {feedback}
+      {moreProjects}
       <MotionReveal className="case-end">
-        <span className="case-end-mark" aria-hidden="true">
-          <ArrowUpRight size={40} />
-        </span>
-        <p className="eyebrow">Let’s work together</p>
-        <h2>Have a project in mind?</h2>
-        <div className="case-end-links">
-          <ActionLink href="/#contact" label="Start a conversation" />
-          <Link href="/projects" className="case-back">
-            <ArrowLeft size={16} aria-hidden="true" />
-            Back to all projects
-          </Link>
-        </div>
+        <section aria-labelledby="case-contact-heading">
+          <p className="eyebrow">Let’s work together</p>
+          <h2 id="case-contact-heading">Have a project in mind?</h2>
+          <p className="case-end-copy">
+            Starting something new or making an existing product better? Let’s
+            talk about where you want to take it.
+          </p>
+          <div className="case-end-links">
+            <ActionLink
+              href="/?view=html#contact"
+              label="Start a conversation"
+            />
+            <ActionLink
+              href="/projects"
+              label="View all projects"
+              variant="secondary"
+            />
+          </div>
+        </section>
       </MotionReveal>
       <script
         type="application/ld+json"

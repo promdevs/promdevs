@@ -20,6 +20,7 @@ import {
   encodeContactAttachments,
 } from "@/lib/contact-attachments";
 import styles from "./Contact.module.css";
+import { trackEnquiry } from "@/lib/analytics";
 
 const BookingCalendar = dynamic(
   () => import("@/components/booking/BookingCalendar"),
@@ -115,6 +116,7 @@ export function Contact({ receipt }: { receipt?: ContactReceipt } = {}) {
       };
       if (!response.ok)
         throw new Error(body.error ?? "Failed to send message.");
+      if (typeof body.message === "string") trackEnquiry("contact_form");
       setStatus("success");
       setFeedback(body.message ?? "Message sent successfully.");
       setForm(initialValues);
@@ -145,6 +147,10 @@ export function Contact({ receipt }: { receipt?: ContactReceipt } = {}) {
         <p className="intro-copy">
           A new idea. A product to improve. A team to build. Talk it through on
           a call, or send us a few details.
+        </p>
+        <p className={styles.directEmail}>
+          Prefer email?{" "}
+          <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>
         </p>
         <noscript>
           <p className={styles.bookingNote}>
@@ -369,6 +375,11 @@ export function Contact({ receipt }: { receipt?: ContactReceipt } = {}) {
                   label={submitting ? "Sending..." : "Send your message"}
                   loading={submitting}
                 />
+                <p className={styles.privacyNote}>
+                  We use your details and any attachments to respond to your
+                  enquiry.{" "}
+                  <a href="/privacy-policy">Read our privacy policy.</a>
+                </p>
               </fieldset>
               <p
                 role="status"
