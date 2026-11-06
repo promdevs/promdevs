@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { canOptimizeImage } from "../lib/image-delivery";
 
 export function ProjectImage({
   src,
@@ -29,7 +30,7 @@ export function ProjectImage({
       sizes={sizes}
       loading={priority ? "eager" : "lazy"}
       fetchPriority={priority ? "high" : undefined}
-      unoptimized
+      unoptimized={!canOptimizeImage(src)}
       style={{ objectFit: contain ? "contain" : "cover" }}
       onError={() => setFailed(src)}
     />

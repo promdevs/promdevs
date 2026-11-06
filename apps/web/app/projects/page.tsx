@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getProjectCatalog } from "@/lib/api";
 import { ProjectsDirectory } from "@/components/ProjectsDirectory";
+import { socialMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 type Props = {
@@ -18,12 +19,11 @@ export function generateMetadata(): Metadata {
     alternates: {
       canonical: "/projects",
     },
-    openGraph: {
-      title: `${title} | PromDevs`,
+    ...socialMetadata({
+      title,
       description,
-      url: "/projects",
-    },
-    twitter: { title: `${title} | PromDevs`, description },
+      path: "/projects",
+    }),
   };
 }
 

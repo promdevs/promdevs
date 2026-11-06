@@ -1,5 +1,7 @@
 export const site = {
   name: "PromDevs",
+  legalName: "PROMDEVS TECHNOLOGY CONCEPTS",
+  contactEmail: "info@promdevs.com",
   url: "https://www.promdevs.com",
   bookingUrl: "https://cal.com/promdevs/discovery-call",
   title: "PromDevs | Web, Mobile & AI Product Studio",

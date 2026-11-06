@@ -8,9 +8,13 @@ import { projectLabel } from "../lib/project-catalog";
 export function ProjectCard({
   project,
   index = 0,
+  headingAs: Heading = "h2",
+  priority = index < 3,
 }: {
   project: PublicProjectSummary;
   index?: number;
+  headingAs?: "h2" | "h3";
+  priority?: boolean;
 }) {
   return (
     <MotionReveal delayMs={(index % 3) * 80}>
@@ -36,7 +40,7 @@ export function ProjectCard({
           <ProjectImage
             src={project.coverImage}
             alt={project.coverAlt}
-            priority={index < 3}
+            priority={priority}
             sizes="(min-width: 1100px) 30vw, (min-width: 700px) 46vw, 92vw"
           />
           {project.productTypes.length > 0 && (
@@ -46,11 +50,11 @@ export function ProjectCard({
           )}
         </div>
         <div className="catalog-card-info">
-          <h2>
+          <Heading>
             <Link href={`/projects/${project.slug}`} prefetch={false}>
               <span>{project.title}</span>
             </Link>
-          </h2>
+          </Heading>
           <ArrowUpRight size={19} aria-hidden="true" />
           <p>{project.description}</p>
         </div>

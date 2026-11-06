@@ -3,6 +3,9 @@ import Image from "next/image";
 import { ArrowUp, ArrowUpRight } from "lucide-react";
 import { MotionReveal } from "@/components/MotionReveal";
 import { site } from "@/lib/site";
+import { expertiseNavigation } from "@/data/expertise-navigation";
+import { serviceAreas } from "@/data/services";
+import { PrivacySettingsButton } from "./PrivacyChoices";
 import styles from "./Footer.module.css";
 
 type FooterItem = { label: string; href?: string; external?: boolean };
@@ -11,9 +14,9 @@ const groups: { title: string; items: FooterItem[] }[] = [
   {
     title: "Studio",
     items: [
-      { label: "About us" },
+      { label: "About us", href: "/about" },
       { label: "Our work", href: "/projects" },
-      { label: "Client stories", href: "/#reviews" },
+      { label: "Client stories", href: "/client-stories" },
       { label: "FAQs", href: "/#faqs" },
       { label: "Journal" },
       { label: "Careers" },
@@ -21,27 +24,26 @@ const groups: { title: string; items: FooterItem[] }[] = [
   },
   {
     title: "Capabilities",
-    items: [
-      { label: "Product design & engineering", href: "/#services" },
-      { label: "Web, mobile & AI products", href: "/#services" },
-      { label: "Prototype to production", href: "/#services" },
-      { label: "Product rescue & migrations", href: "/#services" },
-      { label: "Quality & launch", href: "/#services" },
-    ],
+    items: serviceAreas.map(({ id, name }) => ({
+      label: name,
+      href: `/services#${id}`,
+    })),
   },
   {
     title: "Expertise",
     items: [
-      { label: "Lovable", href: "/#contact" },
-      { label: "Replit", href: "/#contact" },
-      { label: "Base44", href: "/#contact" },
-      { label: "AI-assisted builds", href: "/#services" },
+      ...expertiseNavigation.map(({ name, href }) => ({ label: name, href })),
+      {
+        label: "AI-assisted builds",
+        href: "/services#prototype-to-production",
+      },
     ],
   },
   {
     title: "Connect",
     items: [
       { label: "Let's talk", href: "/#contact" },
+      { label: site.contactEmail, href: `mailto:${site.contactEmail}` },
       ...site.socials.map((social) => ({
         label: social.label,
         href: social.url,
@@ -77,7 +79,7 @@ function FooterDestination({
   const isSection = item.href.startsWith("/#");
   const href = isSection ? `${homePath}${item.href.slice(1)}` : item.href;
 
-  return item.external || isSection ? (
+  return item.external || isSection || href.startsWith("mailto:") ? (
     <a href={href} className={styles.link}>
       {content}
     </a>
@@ -115,8 +117,8 @@ export function Footer({ homePath = "/" }: { homePath?: string } = {}) {
               </span>
             </Link>
             <p>
-              An independent digital product studio. Design-led.
-              Engineering-minded. With you from idea to launch.
+              A digital product studio. Design-led. Engineering-minded. With you
+              from idea to launch.
             </p>
           </MotionReveal>
           {groups.map((group, index) => (
@@ -140,8 +142,13 @@ export function Footer({ homePath = "/" }: { homePath?: string } = {}) {
             &copy; {new Date().getFullYear()} PromDevs. All rights reserved.
           </p>
           <div className={styles.legal}>
-            <FooterDestination item={{ label: "Privacy policy" }} />
-            <FooterDestination item={{ label: "Terms of service" }} />
+            <PrivacySettingsButton className={styles.link} />
+            <FooterDestination
+              item={{ label: "Privacy policy", href: "/privacy-policy" }}
+            />
+            <FooterDestination
+              item={{ label: "Terms of service", href: "/terms-of-service" }}
+            />
           </div>
           <a href="#main-content" className={styles.link}>
             <span>Back to top</span>

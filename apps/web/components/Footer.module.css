@@ -59,6 +59,7 @@
 }
 
 .link > span {
+  overflow-wrap: anywhere;
   background-image: linear-gradient(#2563eb, #2563eb);
   background-repeat: no-repeat;
   background-position: left bottom;

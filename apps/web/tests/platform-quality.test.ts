@@ -148,7 +148,14 @@ test("the sitemap retains all real URLs and responds with a retryable failure on
   ]);
   assert.equal(complete.status, 200);
   const xml = await complete.text();
-  assert.equal((xml.match(/<loc>/g) || []).length, 4);
+  assert.equal((xml.match(/<loc>/g) || []).length, 12);
+  assert.ok(xml.includes("/services"));
+  for (const platform of ["replit", "lovable", "base44"])
+    assert.ok(xml.includes(`/expertise/${platform}`));
+  assert.ok(xml.includes("/privacy-policy"));
+  assert.ok(xml.includes("/terms-of-service"));
+  assert.ok(xml.includes("/about"));
+  assert.ok(xml.includes("/client-stories"));
   assert.ok(xml.includes("/projects/second-product"));
   const failed = await sitemapResponse(async () => {
     throw new Error("private-database-url");
@@ -159,12 +166,13 @@ test("the sitemap retains all real URLs and responds with a retryable failure on
   assert.ok(!(await failed.text()).includes("private-database-url"));
 });
 
-test("planned Client Stories page remains coming soon, and header has native navigation", async () => {
+test("Client Stories is linked in navigation, and header has native navigation", async () => {
   const header = await readFile(
     new URL("../components/Header.tsx", import.meta.url),
     "utf8",
   );
-  assert.match(header, /Client Stories<small className="nav-soon">Coming soon/);
+  assert.match(header, /href="\/client-stories" onClick=\{close\}/);
+  assert.doesNotMatch(header, /nav-soon/);
   assert.match(header, /className="no-script-nav"/);
   const form = await readFile(
     new URL("../components/sections/Contact.tsx", import.meta.url),

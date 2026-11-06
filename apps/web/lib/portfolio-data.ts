@@ -2,6 +2,7 @@ import {
   publicProjectSchema,
   publicProjectSummarySchema,
   publicReviewSchema,
+  type PublicProject,
   type PublicProjectSummary,
   type PublicReview,
 } from "@promdevs/contracts";
@@ -104,6 +105,38 @@ export async function featuredWorkProjects(
   return work;
 }
 
+export async function projectsForPlatform(
+  base: string,
+  platform: string,
+  fetcher: Fetcher = fetch,
+) {
+  const catalog = await allProjects(base, fetcher);
+  const matches: PublicProject[] = [];
+  // Summaries omit builtWith. Bound detail concurrency while retaining API order.
+  for (let offset = 0; offset < catalog.length; offset += 4) {
+    const batch = await Promise.all(
+      catalog.slice(offset, offset + 4).map(async ({ slug }) => {
+        try {
+          const project = await projectBySlug(base, slug, fetcher);
+          return project?.builtWith.some(
+            (value) => value.trim().toLowerCase() === platform.toLowerCase(),
+          )
+            ? project
+            : null;
+        } catch (error) {
+          console.error(
+            `[portfolio] Expertise project unavailable (${slug}):`,
+            error instanceof Error ? error.message : "Unknown error",
+          );
+          return null;
+        }
+      }),
+    );
+    for (const project of batch) if (project) matches.push(project);
+  }
+  return matches;
+}
+
 export async function selectedPortfolio(
   base: string,
   resource: Resource,
@@ -119,6 +152,29 @@ export async function selectedPortfolio(
   return preferred.items.length
     ? preferred.items
     : (await portfolioPage(base, resource, { limit }, fetcher)).items;
+}
+
+export async function allReviews(
+  base: string,
+  fetcher: Fetcher = fetch,
+): Promise<PublicReview[]> {
+  const reviews: PublicReview[] = [];
+  let offset = 0;
+  while (true) {
+    const { items, total } = await portfolioPage(
+      base,
+      "reviews",
+      { offset },
+      fetcher,
+    );
+    reviews.push(...(items as PublicReview[]));
+    offset += items.length;
+    if (offset >= total) return reviews;
+    if (!items.length || offset > 10000)
+      throw new Error(
+        "Portfolio pagination could not retrieve the complete review collection",
+      );
+  }
 }
 
 export async function reviewsForProject(

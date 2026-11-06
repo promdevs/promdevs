@@ -17,8 +17,9 @@ export function ProjectCover({
       <span
         className="case-cover-ambience"
         aria-hidden="true"
-        style={{ backgroundImage: `url(${JSON.stringify(src)})` }}
-      />
+      >
+        <ProjectImage src={src} alt="" sizes="160px" />
+      </span>
       <span className="case-cover-wash" aria-hidden="true" />
       <ProjectImage
         src={src}
